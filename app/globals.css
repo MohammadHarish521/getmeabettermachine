@@ -73,6 +73,34 @@ body {
   letter-spacing: -0.06em;
 }
 
+/* Keep the machine visible in the first fold on common laptop displays. */
+@media (min-width: 768px) and (max-height: 820px) {
+  .hero-section {
+    padding-top: 1.5rem;
+  }
+
+  .hero-proof {
+    margin-bottom: 1rem;
+  }
+
+  .hero-section .display {
+    font-size: clamp(2.5rem, 4.5vw, 3.5rem);
+  }
+
+  .hero-lede {
+    margin-top: 0.625rem;
+    line-height: 1.5;
+  }
+
+  .hero-funding {
+    margin-top: 1.125rem;
+  }
+
+  .hero-machine {
+    margin-top: 1rem;
+  }
+}
+
 .section-title {
   font-size: 1.875rem;
   font-weight: 600;

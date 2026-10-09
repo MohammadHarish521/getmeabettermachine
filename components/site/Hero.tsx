@@ -41,8 +41,8 @@ export function Hero({
     : "Ladder complete";
 
   return (
-    <section className="mx-auto flex max-w-[1120px] flex-col items-center px-5 pt-14 pb-16 text-center sm:px-6 md:pt-16">
-      <div className="mb-8 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px] text-mute">
+    <section className="hero-section mx-auto flex max-w-[1120px] flex-col items-center px-5 pt-14 pb-16 text-center sm:px-6 md:pt-16">
+      <div className="hero-proof mb-8 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px] text-mute">
         {stats ? (
           <>
             <span className="inline-flex items-center gap-1.5">
@@ -83,12 +83,12 @@ export function Hero({
         ) : null}
       </div>
       <h1 className="display mx-auto max-w-[18ch]">Help me build on a better Mac.</h1>
-      <p className="mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-mute">
+      <p className="hero-lede mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-mute">
         Brands don’t donate. They take a numbered sticker on the computer I’ll
         ship from.
       </p>
 
-      <div className="mx-auto mt-8 w-full max-w-md">
+      <div className="hero-funding mx-auto mt-8 w-full max-w-md">
         <div className="flex items-baseline justify-between gap-4">
           <p className="tabular-nums">
             <span className="text-2xl font-semibold text-green">{funding.copy.raisedLabel}</span>
@@ -106,7 +106,7 @@ export function Hero({
         ) : null}
       </div>
 
-      <div className="mt-8 w-full">
+      <div className="hero-machine mt-8 w-full">
         <SpotStage spots={spots} />
       </div>
     </section>
