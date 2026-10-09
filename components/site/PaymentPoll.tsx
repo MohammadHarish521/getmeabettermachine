@@ -15,7 +15,7 @@ export function PaymentPoll({ paymentId }: { paymentId: string | null }) {
 
   useEffect(() => {
     const id = paymentId
-      .split(",")
+      ?.split(",")
       .map((part) => part.trim())
       .find((part) => part && !part.startsWith("pay_"));
     if (!id) {

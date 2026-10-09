@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const type =
     icon.type === "image/svg+xml" ? "image/svg+xml; charset=utf-8" : icon.type;
 
-  return new Response(icon.body, {
+  return new Response(Uint8Array.from(icon.body), {
     headers: {
       "Content-Type": type,
       "Cache-Control": "public, max-age=86400",

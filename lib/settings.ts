@@ -27,7 +27,8 @@ function mergeSettings(raw: unknown): SiteSettings {
       linkedInUrl: parsed.creator?.linkedInUrl ?? SITE_DEFAULTS.creator.linkedInUrl,
     },
     socialProof: {
-      xFollowing: parsed.socialProof?.xFollowing ?? null,
+      xFollowing:
+        parsed.socialProof?.xFollowing ?? SITE_DEFAULTS.socialProof.xFollowing,
       linkedInFollowing: parsed.socialProof?.linkedInFollowing ?? null,
       monthlyImpressions: parsed.socialProof?.monthlyImpressions ?? null,
       productsLaunched: parsed.socialProof?.productsLaunched ?? null,
