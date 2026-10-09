@@ -13,7 +13,7 @@ export async function PATCH(
   try {
     await requireAdmin();
     const { id } = await context.params;
-    const existing = getSponsorById(id);
+    const existing = await getSponsorById(id);
     if (!existing) throw new HttpError(404, "Sponsor not found.");
     const body = (await request.json()) as Record<string, unknown>;
 
@@ -48,7 +48,7 @@ export async function PATCH(
     }
     if (typeof body.status === "string") patch.status = body.status;
 
-    const updated = updateSponsor(id, patch);
+    const updated = await updateSponsor(id, patch);
     return Response.json({ sponsor: updated });
   } catch (error) {
     return jsonError(error);

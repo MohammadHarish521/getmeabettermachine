@@ -15,14 +15,14 @@ import type {
 } from "@/lib/types";
 
 export const getHomeSnapshot = cache(async () => {
-  const tiers = listMachineTiers();
-  const raised = paidRaised();
+  const tiers = await listMachineTiers();
+  const raised = await paidRaised();
   const funding = resolveFunding(raised, tiers);
-  const sponsors = listVisibleSponsors();
-  const spots = listPublicSpots();
+  const sponsors = await listVisibleSponsors();
+  const spots = await listPublicSpots();
   const stats = sponsorStats(sponsors, raised);
-  const activity = listActivity(12);
-  const settings = getSiteSettings();
+  const activity = await listActivity(12);
+  const settings = await getSiteSettings();
 
   return {
     funding,
@@ -35,24 +35,26 @@ export const getHomeSnapshot = cache(async () => {
   };
 });
 
-export function paidRaised() {
-  const row = getDb()
+export async function paidRaised() {
+  const db = await getDb();
+  const row = await db
     .prepare(
       "SELECT COALESCE(SUM(amount), 0) AS total FROM sponsors WHERE status = 'paid'",
     )
-    .get() as { total: number };
-  return Number(row.total) || 0;
+    .get<{ total: number }>();
+  return Number(row?.total) || 0;
 }
 
-export function listVisibleSponsors(): PublicSponsor[] {
-  const names = new Map(listSpotRows().map((spot) => [spot.id, spot.name]));
-  const rows = getDb()
+export async function listVisibleSponsors(): Promise<PublicSponsor[]> {
+  const names = new Map((await listSpotRows()).map((spot) => [spot.id, spot.name]));
+  const db = await getDb();
+  const rows = await db
     .prepare(
       `SELECT * FROM sponsors
        WHERE status = 'paid' AND is_visible = 1
        ORDER BY created_at DESC`,
     )
-    .all() as SponsorRow[];
+    .all<SponsorRow>();
 
   return rows.map((row) => ({
     ...toPublicSponsor(row),
@@ -94,15 +96,16 @@ export function sponsorStats(sponsors: PublicSponsor[], raised: number) {
   };
 }
 
-export function listActivity(limit = 12): ActivityItem[] {
-  const rows = getDb()
+export async function listActivity(limit = 12): Promise<ActivityItem[]> {
+  const db = await getDb();
+  const rows = await db
     .prepare(
       `SELECT id, type, label, created_at
        FROM activity_events
        ORDER BY created_at DESC
        LIMIT ?`,
     )
-    .all(limit) as ActivityRow[];
+    .all<ActivityRow>(limit);
 
   return rows.map((row) => ({
     id: row.id,
@@ -112,31 +115,32 @@ export function listActivity(limit = 12): ActivityItem[] {
   }));
 }
 
-export function listAllSponsors() {
-  return getDb()
+export async function listAllSponsors() {
+  const db = await getDb();
+  return db
     .prepare(`SELECT * FROM sponsors ORDER BY created_at DESC`)
-    .all() as SponsorRow[];
+    .all<SponsorRow>();
 }
 
-export function listAllPayments() {
-  return getDb()
-    .prepare(`SELECT * FROM payments ORDER BY created_at DESC`)
-    .all();
+export async function listAllPayments() {
+  const db = await getDb();
+  return db.prepare(`SELECT * FROM payments ORDER BY created_at DESC`).all();
 }
 
-export function listRecentWebhooks(limit = 20) {
-  return getDb()
+export async function listRecentWebhooks(limit = 20) {
+  const db = await getDb();
+  return db
     .prepare(
       `SELECT event_id, processed_at FROM processed_webhooks
        ORDER BY processed_at DESC LIMIT ?`,
     )
-    .all(limit) as Array<{ event_id: string; processed_at: string }>;
+    .all<{ event_id: string; processed_at: string }>(limit);
 }
 
-export function adminOverview() {
-  const db = getDb();
-  const raised = paidRaised();
-  const payments = db
+export async function adminOverview() {
+  const db = await getDb();
+  const raised = await paidRaised();
+  const payments = await db
     .prepare(
       `SELECT
          COUNT(*) AS total,
@@ -145,31 +149,31 @@ export function adminOverview() {
          COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed
        FROM payments`,
     )
-    .get() as {
+    .get<{
     total: number;
     succeeded: number;
     pending: number;
     failed: number;
-  };
-  const webhooks = db
+  }>();
+  const webhooks = await db
     .prepare("SELECT COUNT(*) AS count FROM processed_webhooks")
-    .get() as { count: number };
+    .get<{ count: number }>();
 
   return {
     raised,
-    sponsorCount: listVisibleSponsors().length,
-    payments,
-    webhookCount: webhooks.count,
-    recentWebhooks: listRecentWebhooks(),
-    sponsors: listAllSponsors(),
-    spots: listPublicSpots(),
-    tiers: listMachineTiers(),
-    settings: getSiteSettings(),
+    sponsorCount: (await listVisibleSponsors()).length,
+    payments: payments ?? { total: 0, succeeded: 0, pending: 0, failed: 0 },
+    webhookCount: webhooks?.count ?? 0,
+    recentWebhooks: await listRecentWebhooks(),
+    sponsors: await listAllSponsors(),
+    spots: await listPublicSpots(),
+    tiers: await listMachineTiers(),
+    settings: await getSiteSettings(),
     mockPayments: !isDodoConfigured(),
   };
 }
 
-export function updateSponsor(
+export async function updateSponsor(
   id: string,
   patch: Partial<{
     name: string;
@@ -183,12 +187,13 @@ export function updateSponsor(
     status: string;
   }>,
 ) {
-  const current = getDb()
+  const db = await getDb();
+  const current = await db
     .prepare("SELECT * FROM sponsors WHERE id = ?")
-    .get(id) as SponsorRow | undefined;
+    .get<SponsorRow>(id);
   if (!current) return null;
   const next = { ...current, ...patch };
-  getDb()
+  await db
     .prepare(
       `UPDATE sponsors
        SET name = ?, company = ?, website = ?, x_url = ?, logo_url = ?, message = ?,
@@ -208,7 +213,5 @@ export function updateSponsor(
       nowIso(),
       id,
     );
-  return getDb()
-    .prepare("SELECT * FROM sponsors WHERE id = ?")
-    .get(id) as SponsorRow;
+  return db.prepare("SELECT * FROM sponsors WHERE id = ?").get<SponsorRow>(id);
 }

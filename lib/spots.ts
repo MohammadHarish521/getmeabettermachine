@@ -22,16 +22,16 @@ export type SpotRow = {
   pending_at: string | null;
 };
 
-export function getSpot(id: string) {
-  return getDb()
-    .prepare("SELECT * FROM spots WHERE id = ?")
-    .get(id) as SpotRow | undefined;
+export async function getSpot(id: string) {
+  const db = await getDb();
+  return db.prepare("SELECT * FROM spots WHERE id = ?").get<SpotRow>(id);
 }
 
-export function listSpotRows() {
-  return getDb()
+export async function listSpotRows() {
+  const db = await getDb();
+  return db
     .prepare("SELECT * FROM spots ORDER BY sort_order ASC, number ASC")
-    .all() as SpotRow[];
+    .all<SpotRow>();
 }
 
 export function isSpotHeld(spot: SpotRow, now = Date.now()) {
@@ -47,17 +47,18 @@ export function nextSpotPrice(spot: SpotRow) {
   return spot.base_price;
 }
 
-export function listPublicSpots(): PublicSpot[] {
-  const rows = listSpotRows();
+export async function listPublicSpots(): Promise<PublicSpot[]> {
+  const rows = await listSpotRows();
   const occupantIds = rows
     .map((row) => row.occupant_sponsor_id)
     .filter((id): id is string => Boolean(id));
+  const db = await getDb();
   const sponsors = occupantIds.length
-    ? (getDb()
+    ? await db
         .prepare(
           `SELECT * FROM sponsors WHERE id IN (${occupantIds.map(() => "?").join(",")})`,
         )
-        .all(...occupantIds) as SponsorRow[])
+        .all<SponsorRow>(...occupantIds)
     : [];
   const byId = new Map(sponsors.map((row) => [row.id, row]));
 
@@ -110,8 +111,8 @@ function toSpotOccupant(row: SponsorRow, spotName: string): PublicSponsor {
   };
 }
 
-export function holdSpot(spotId: string, paymentId: string, amount: number) {
-  const spot = getSpot(spotId);
+export async function holdSpot(spotId: string, paymentId: string, amount: number) {
+  const spot = await getSpot(spotId);
   if (!spot) throw new HttpError(404, "That spot does not exist.");
   if (isSpotHeld(spot)) {
     throw new HttpError(409, "Someone else is checking out that spot. Try another.");
@@ -120,7 +121,8 @@ export function holdSpot(spotId: string, paymentId: string, amount: number) {
   if (amount < price) {
     throw new HttpError(400, `That spot is ${price === spot.base_price ? "" : "now "}$${price}.`);
   }
-  getDb()
+  const db = await getDb();
+  await db
     .prepare(
       "UPDATE spots SET pending_payment_id = ?, pending_at = ? WHERE id = ?",
     )
@@ -128,12 +130,13 @@ export function holdSpot(spotId: string, paymentId: string, amount: number) {
   return spot;
 }
 
-export function occupySpot(spotId: string, sponsorId: string, amount: number) {
-  const spot = getSpot(spotId);
+export async function occupySpot(spotId: string, sponsorId: string, amount: number) {
+  const spot = await getSpot(spotId);
   if (!spot) return;
   const current = spot.current_amount || 0;
   if (spot.occupant_sponsor_id && amount < current) return;
-  getDb()
+  const db = await getDb();
+  await db
     .prepare(
       `UPDATE spots
        SET occupant_sponsor_id = ?, current_amount = ?,
@@ -143,8 +146,9 @@ export function occupySpot(spotId: string, sponsorId: string, amount: number) {
     .run(sponsorId, amount, spotId);
 }
 
-export function clearSpotPending(paymentId: string) {
-  getDb()
+export async function clearSpotPending(paymentId: string) {
+  const db = await getDb();
+  await db
     .prepare(
       `UPDATE spots
        SET pending_payment_id = NULL, pending_at = NULL
@@ -153,8 +157,9 @@ export function clearSpotPending(paymentId: string) {
     .run(paymentId);
 }
 
-export function clearSpotOccupant(sponsorId: string) {
-  getDb()
+export async function clearSpotOccupant(sponsorId: string) {
+  const db = await getDb();
+  await db
     .prepare(
       `UPDATE spots
        SET occupant_sponsor_id = NULL, current_amount = 0
@@ -163,8 +168,9 @@ export function clearSpotOccupant(sponsorId: string) {
     .run(sponsorId);
 }
 
-export function updateSpotPrice(id: string, basePrice: number) {
-  getDb().prepare("UPDATE spots SET base_price = ? WHERE id = ?").run(basePrice, id);
+export async function updateSpotPrice(id: string, basePrice: number) {
+  const db = await getDb();
+  await db.prepare("UPDATE spots SET base_price = ? WHERE id = ?").run(basePrice, id);
 }
 
 export function spotBySurface(spots: PublicSpot[], surface: PublicSpot["surface"]) {

@@ -1,15 +1,127 @@
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  createClient,
+  type Client,
+  type InArgs,
+  type ResultSet,
+  type Transaction,
+} from "@libsql/client";
+import type Database from "better-sqlite3";
 import { MACHINE_TIERS } from "@/config/machine-tiers";
 import { SPOTS } from "@/config/spots";
 import { FOUNDER_SPONSOR, SITE_DEFAULTS } from "@/config/site";
 import { env } from "@/lib/env";
 import { formatUsd, letterLogo } from "@/lib/format";
 
-const globalForDb = globalThis as unknown as {
-  __raiseMyMacDb?: Database.Database;
+type SqlValue = string | number | bigint | Uint8Array | null | undefined;
+
+export type SqlStatement = {
+  get<T = unknown>(...args: SqlValue[]): Promise<T | undefined>;
+  all<T = unknown>(...args: SqlValue[]): Promise<T[]>;
+  run(...args: SqlValue[]): Promise<{ changes: number }>;
 };
+
+export type SqlDb = {
+  exec(sql: string): Promise<void>;
+  prepare(sql: string): SqlStatement;
+  transaction<T>(fn: () => Promise<T>): Promise<T>;
+};
+
+const globalForDb = globalThis as unknown as {
+  __raiseMyMacDb?: Promise<SqlDb>;
+};
+
+function argsOf(args: SqlValue[]): InArgs {
+  return args.map((value) => (value === undefined ? null : value)) as InArgs;
+}
+
+function rowsOf<T>(result: ResultSet): T[] {
+  return result.rows.map((row) => {
+    const record: Record<string, unknown> = {};
+    for (const column of result.columns) {
+      const value = row[column];
+      record[column] = typeof value === "bigint" ? Number(value) : value;
+    }
+    return record as T;
+  });
+}
+
+function localDb(db: Database.Database): SqlDb {
+  return {
+    async exec(sql) {
+      db.exec(sql);
+    },
+    prepare(sql) {
+      const statement = db.prepare(sql);
+      return {
+        async get<T>(...args: SqlValue[]) {
+          return statement.get(...args) as T | undefined;
+        },
+        async all<T>(...args: SqlValue[]) {
+          return statement.all(...args) as T[];
+        },
+        async run(...args: SqlValue[]) {
+          return { changes: statement.run(...args).changes };
+        },
+      };
+    },
+    async transaction(fn) {
+      db.exec("BEGIN");
+      try {
+        const result = await fn();
+        db.exec("COMMIT");
+        return result;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
+    },
+  };
+}
+
+function remoteDb(client: Client): SqlDb {
+  const current = new AsyncLocalStorage<Transaction>();
+  const execute = (sql: string, args: SqlValue[]) => {
+    const target = current.getStore() ?? client;
+    return target.execute({ sql, args: argsOf(args) });
+  };
+  return {
+    async exec(sql) {
+      const tx = current.getStore();
+      if (tx) await tx.executeMultiple(sql);
+      else await client.executeMultiple(sql);
+    },
+    prepare(sql) {
+      return {
+        async get<T>(...args: SqlValue[]) {
+          const result = await execute(sql, args);
+          return rowsOf<T>(result)[0];
+        },
+        async all<T>(...args: SqlValue[]) {
+          const result = await execute(sql, args);
+          return rowsOf<T>(result);
+        },
+        async run(...args: SqlValue[]) {
+          const result = await execute(sql, args);
+          return { changes: Number(result.rowsAffected) };
+        },
+      };
+    },
+    async transaction(fn) {
+      const tx = await client.transaction("write");
+      try {
+        const result = await current.run(tx, fn);
+        await tx.commit();
+        return result;
+      } catch (error) {
+        await tx.rollback();
+        throw error;
+      }
+    },
+  };
+}
 
 export function nowIso() {
   return new Date().toISOString();
@@ -17,29 +129,36 @@ export function nowIso() {
 
 export function getDb() {
   if (!globalForDb.__raiseMyMacDb) {
-    const configured = env("DB_PATH");
-    const dbPath = configured
-      ? path.resolve(/* turbopackIgnore: true */ process.cwd(), configured)
-      : process.env.VERCEL
-        ? path.join("/tmp", "raise-my-mac.db")
-        : path.join(process.cwd(), "data", "raise-my-mac.db");
-    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-
-    const created = new Database(dbPath);
-    created.pragma("journal_mode = WAL");
-    created.pragma("foreign_keys = ON");
-    globalForDb.__raiseMyMacDb = created;
+    globalForDb.__raiseMyMacDb = openDb();
   }
+  return globalForDb.__raiseMyMacDb;
+}
 
-  const db = globalForDb.__raiseMyMacDb;
-  // Always migrate. Hot reload reuses this connection from before
-  // later tables (like spots) existed.
-  migrate(db);
+async function openDb(): Promise<SqlDb> {
+  const url = env("TURSO_DATABASE_URL");
+  const authToken = env("TURSO_AUTH_TOKEN");
+  const db = url
+    ? remoteDb(createClient({ url, authToken }))
+    : localDb(await openLocalFile());
+  await migrate(db);
   return db;
 }
 
-function migrate(db: Database.Database) {
-  db.exec(`
+async function openLocalFile() {
+  const { default: Database } = await import("better-sqlite3");
+  const configured = env("DB_PATH");
+  const dbPath = configured
+    ? path.resolve(/* turbopackIgnore: true */ process.cwd(), configured)
+    : path.join(process.cwd(), "data", "raise-my-mac.db");
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const created = new Database(dbPath);
+  created.pragma("journal_mode = WAL");
+  created.pragma("foreign_keys = ON");
+  return created;
+}
+
+async function migrate(db: SqlDb) {
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS sponsors (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL DEFAULT '',
@@ -142,33 +261,35 @@ function migrate(db: Database.Database) {
       WHERE dodo_payment_id IS NOT NULL;
   `);
 
-  seedTiersIfEmpty(db);
-  upsertDefaultSpots(db);
-  seedSettingsIfEmpty(db);
-  addColumn(db, "sponsors", "spot_id", "TEXT");
-  seedFounderSponsor(db);
+  await seedTiersIfEmpty(db);
+  await upsertDefaultSpots(db);
+  await seedSettingsIfEmpty(db);
+  await addColumn(db, "sponsors", "spot_id", "TEXT");
+  await seedFounderSponsor(db);
 }
 
-export function seedTiersIfEmpty(db = getDb()) {
-  const row = db.prepare("SELECT COUNT(*) AS count FROM machine_tiers").get() as {
-    count: number;
-  };
-  if (row.count > 0) return;
-  insertDefaultTiers(db);
+export async function seedTiersIfEmpty(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const row = await database
+    .prepare("SELECT COUNT(*) AS count FROM machine_tiers")
+    .get<{ count: number }>();
+  if (row && row.count > 0) return;
+  await insertDefaultTiers(database);
 }
 
-export function insertDefaultTiers(db = getDb()) {
-  const insert = db.prepare(
+export async function insertDefaultTiers(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const insert = database.prepare(
     `INSERT INTO machine_tiers (
        id, sort_order, amount_required, machine_name, chip, memory, storage,
        description, short_label, image
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
-  const apply = db.transaction(() => {
-    db.exec("DELETE FROM machine_tiers");
+  await database.transaction(async () => {
+    await database.exec("DELETE FROM machine_tiers");
     for (const tier of MACHINE_TIERS) {
-      insert.run(
+      await insert.run(
         tier.id,
         tier.sortOrder,
         tier.amountRequired,
@@ -182,20 +303,20 @@ export function insertDefaultTiers(db = getDb()) {
       );
     }
   });
-
-  apply();
 }
 
-export function seedSpotsIfEmpty(db = getDb()) {
-  const row = db.prepare("SELECT COUNT(*) AS count FROM spots").get() as {
-    count: number;
-  };
-  if (row.count > 0) return;
-  upsertDefaultSpots(db);
+export async function seedSpotsIfEmpty(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const row = await database
+    .prepare("SELECT COUNT(*) AS count FROM spots")
+    .get<{ count: number }>();
+  if (row && row.count > 0) return;
+  await upsertDefaultSpots(database);
 }
 
-export function upsertDefaultSpots(db = getDb()) {
-  const insert = db.prepare(
+export async function upsertDefaultSpots(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const insert = database.prepare(
     `INSERT INTO spots (
        id, sort_order, number, name, description, base_price, size, surface, x, y,
        occupant_sponsor_id, current_amount, pending_payment_id, pending_at
@@ -212,9 +333,9 @@ export function upsertDefaultSpots(db = getDb()) {
        y = excluded.y`,
   );
 
-  const apply = db.transaction(() => {
+  await database.transaction(async () => {
     for (const spot of SPOTS) {
-      insert.run(
+      await insert.run(
         spot.id,
         spot.number,
         spot.number,
@@ -228,53 +349,57 @@ export function upsertDefaultSpots(db = getDb()) {
       );
     }
   });
-
-  apply();
 }
 
-function addColumn(
-  db: Database.Database,
+async function addColumn(
+  db: SqlDb,
   table: string,
   column: string,
   definition: string,
 ) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+  const cols = await db.prepare(`PRAGMA table_info(${table})`).all<{
     name: string;
-  }>;
+  }>();
   if (cols.some((col) => col.name === column)) return;
-  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
-function seedSettingsIfEmpty(db: Database.Database) {
-  const existing = db
+async function seedSettingsIfEmpty(db: SqlDb) {
+  const existing = await db
     .prepare("SELECT key FROM site_settings WHERE key = 'site'")
-    .get() as { key: string } | undefined;
+    .get<{ key: string }>();
   if (existing) return;
-  db.prepare(
-    "INSERT INTO site_settings (key, value, updated_at) VALUES ('site', ?, ?)",
-  ).run(JSON.stringify(SITE_DEFAULTS), nowIso());
+  await db
+    .prepare(
+      "INSERT INTO site_settings (key, value, updated_at) VALUES ('site', ?, ?)",
+    )
+    .run(JSON.stringify(SITE_DEFAULTS), nowIso());
 }
 
-function seedFounderSponsor(db: Database.Database) {
+async function seedFounderSponsor(db: SqlDb) {
   const now = nowIso();
 
-  db.prepare(
-    `UPDATE sponsors
-     SET status = 'hidden', is_visible = 0, updated_at = ?
-     WHERE name = 'Acme Labs' AND status = 'paid'`,
-  ).run(now);
-  db.prepare(
-    `UPDATE spots
-     SET occupant_sponsor_id = NULL, current_amount = 0
-     WHERE occupant_sponsor_id IN (
-       SELECT id FROM sponsors WHERE name = 'Acme Labs'
-     )`,
-  ).run();
-  db.prepare(
-    `DELETE FROM activity_events WHERE label LIKE 'Acme took %'`,
-  ).run();
+  await db
+    .prepare(
+      `UPDATE sponsors
+       SET status = 'hidden', is_visible = 0, updated_at = ?
+       WHERE name = 'Acme Labs' AND status = 'paid'`,
+    )
+    .run(now);
+  await db
+    .prepare(
+      `UPDATE spots
+       SET occupant_sponsor_id = NULL, current_amount = 0
+       WHERE occupant_sponsor_id IN (
+         SELECT id FROM sponsors WHERE name = 'Acme Labs'
+       )`,
+    )
+    .run();
+  await db
+    .prepare(`DELETE FROM activity_events WHERE label LIKE 'Acme took %'`)
+    .run();
 
-  db.prepare(
+  await db.prepare(
     `INSERT INTO sponsors (
        id, name, company, website, x_url, logo_url, message, amount, currency,
        status, payment_id, checkout_id, is_anonymous, is_visible, spot_id,
@@ -306,7 +431,7 @@ function seedFounderSponsor(db: Database.Database) {
     now,
   );
 
-  db.prepare(
+  await db.prepare(
     `INSERT INTO payments (
        id, sponsor_id, amount, status, provider, created_at, processed_at
      ) VALUES (?, ?, ?, 'succeeded', 'mock', ?, ?)
@@ -322,41 +447,43 @@ function seedFounderSponsor(db: Database.Database) {
     now,
   );
 
-  const seedActivity = (
+  const seedActivity = async (
     id: string,
     type: "sponsor" | "unlock",
     label: string,
     amount: number | null,
     tierId: string | null,
   ) => {
-    const exists = db
+    const exists = await db
       .prepare("SELECT id FROM activity_events WHERE id = ?")
-      .get(id) as { id: string } | undefined;
+      .get<{ id: string }>(id);
     if (exists) return;
-    db.prepare(
-      `INSERT INTO activity_events (id, type, sponsor_id, tier_id, amount, label, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      id,
-      type,
-      type === "sponsor" ? FOUNDER_SPONSOR.id : null,
-      tierId,
-      amount,
-      label,
-      now,
-    );
+    await db
+      .prepare(
+        `INSERT INTO activity_events (id, type, sponsor_id, tier_id, amount, label, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        id,
+        type,
+        type === "sponsor" ? FOUNDER_SPONSOR.id : null,
+        tierId,
+        amount,
+        label,
+        now,
+      );
   };
 
   const founderLabel = `I put in ${formatUsd(FOUNDER_SPONSOR.amount)} to start`;
-  const founderActivity = db
+  const founderActivity = await db
     .prepare("SELECT id FROM activity_events WHERE id = ?")
-    .get("founder-self-activity") as { id: string } | undefined;
+    .get<{ id: string }>("founder-self-activity");
   if (founderActivity) {
-    db.prepare(
-      "UPDATE activity_events SET label = ?, amount = ? WHERE id = ?",
-    ).run(founderLabel, FOUNDER_SPONSOR.amount, "founder-self-activity");
+    await db
+      .prepare("UPDATE activity_events SET label = ?, amount = ? WHERE id = ?")
+      .run(founderLabel, FOUNDER_SPONSOR.amount, "founder-self-activity");
   } else {
-    seedActivity(
+    await seedActivity(
       "founder-self-activity",
       "sponsor",
       founderLabel,
@@ -369,10 +496,10 @@ function seedFounderSponsor(db: Database.Database) {
   for (const tier of MACHINE_TIERS) {
     const eventId = `founder-unlock-${tier.id}`;
     if (FOUNDER_SPONSOR.amount < tier.amountRequired) {
-      dropUnlock.run(eventId);
+      await dropUnlock.run(eventId);
       continue;
     }
-    seedActivity(
+    await seedActivity(
       eventId,
       "unlock",
       `${tier.shortLabel} configuration unlocked`,
@@ -380,5 +507,5 @@ function seedFounderSponsor(db: Database.Database) {
       tier.id,
     );
   }
-  dropUnlock.run("founder-unlock-mini-pro-48-1tb");
+  await dropUnlock.run("founder-unlock-mini-pro-48-1tb");
 }

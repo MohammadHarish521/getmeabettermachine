@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    return Response.json(getPaymentPublicStatus(id));
+    return Response.json(await getPaymentPublicStatus(id));
   } catch (error) {
     return jsonError(error);
   }

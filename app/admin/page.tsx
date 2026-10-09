@@ -20,6 +20,6 @@ export default async function AdminPage() {
   }
 
   await requireAdminPage();
-  const data = adminOverview();
+  const data = await adminOverview();
   return <AdminDashboard initial={data} />;
 }

@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     await requireAdmin();
-    return Response.json({ tiers: listMachineTiers() });
+    return Response.json({ tiers: await listMachineTiers() });
   } catch (error) {
     return jsonError(error);
   }
@@ -25,8 +25,8 @@ export async function POST(request: Request) {
     await requireAdmin();
     const body = (await request.json()) as { action?: string } & Partial<MachineTier>;
     if (body.action === "reset") {
-      insertDefaultTiers();
-      return Response.json({ tiers: listMachineTiers() });
+      await insertDefaultTiers();
+      return Response.json({ tiers: await listMachineTiers() });
     }
 
     if (!body.id || !body.machineName || !body.chip) {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       shortLabel: String(body.shortLabel ?? body.chip),
       image: body.image ?? null,
     };
-    createMachineTier(tier);
+    await createMachineTier(tier);
     return Response.json({ tier }, { status: 201 });
   } catch (error) {
     return jsonError(error);
@@ -57,7 +57,7 @@ export async function PATCH(request: Request) {
     await requireAdmin();
     const body = (await request.json()) as { id?: string } & Partial<MachineTier>;
     if (!body.id) throw new HttpError(400, "id is required.");
-    const updated = updateMachineTier(body.id, body);
+    const updated = await updateMachineTier(body.id, body);
     if (!updated) throw new HttpError(404, "Tier not found.");
     return Response.json({ tier: updated });
   } catch (error) {
@@ -70,7 +70,7 @@ export async function DELETE(request: Request) {
     await requireAdmin();
     const body = (await request.json()) as { id?: string };
     if (!body.id) throw new HttpError(400, "id is required.");
-    deleteMachineTier(body.id);
+    await deleteMachineTier(body.id);
     return Response.json({ ok: true });
   } catch (error) {
     return jsonError(error);

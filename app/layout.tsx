@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { DataFast } from "@/components/site/DataFast";
+import Script from "next/script";
 import { getAppUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -48,7 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full bg-paper text-ink">
-        <DataFast />
+        <Script
+          src="https://datafa.st/js/script.js"
+          data-website-id="dfid_B3o3P3Z0FETAZbOhZRj49"
+          data-domain="www.raisemymini.com"
+          strategy="afterInteractive"
+        />
         <div className="page-noise" aria-hidden="true" />
         {children}
       </body>

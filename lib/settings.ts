@@ -37,10 +37,11 @@ function mergeSettings(raw: unknown): SiteSettings {
   };
 }
 
-export function getSiteSettings(): SiteSettings {
-  const row = getDb()
+export async function getSiteSettings(): Promise<SiteSettings> {
+  const db = await getDb();
+  const row = await db
     .prepare("SELECT value FROM site_settings WHERE key = 'site'")
-    .get() as { value: string } | undefined;
+    .get<{ value: string }>();
   if (!row) return SITE_DEFAULTS;
   try {
     return mergeSettings(JSON.parse(row.value) as unknown);
@@ -49,8 +50,9 @@ export function getSiteSettings(): SiteSettings {
   }
 }
 
-export function saveSiteSettings(next: SiteSettings) {
-  getDb()
+export async function saveSiteSettings(next: SiteSettings) {
+  const db = await getDb();
+  await db
     .prepare(
       `INSERT INTO site_settings (key, value, updated_at)
        VALUES ('site', ?, ?)

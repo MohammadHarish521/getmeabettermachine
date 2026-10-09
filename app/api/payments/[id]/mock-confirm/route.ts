@@ -19,12 +19,12 @@ export async function POST(
       );
     }
     const { id } = await context.params;
-    const payment = getPaymentById(id);
+    const payment = await getPaymentById(id);
     if (!payment) throw new HttpError(404, "Payment not found.");
     if (payment.provider !== "mock") {
       throw new HttpError(400, "This payment is not a mock checkout.");
     }
-    const result = confirmPayment(payment.id);
+    const result = await confirmPayment(payment.id);
     return Response.json({
       paymentId: result.payment.id,
       status: result.payment.status,

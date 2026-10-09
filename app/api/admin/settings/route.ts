@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     await requireAdmin();
-    return Response.json({ settings: getSiteSettings() });
+    return Response.json({ settings: await getSiteSettings() });
   } catch (error) {
     return jsonError(error);
   }
@@ -18,7 +18,7 @@ export async function PUT(request: Request) {
   try {
     await requireAdmin();
     const body = (await request.json()) as Partial<SiteSettings>;
-    const current = getSiteSettings();
+    const current = await getSiteSettings();
     const next: SiteSettings = {
       ...SITE_DEFAULTS,
       ...current,
@@ -29,7 +29,7 @@ export async function PUT(request: Request) {
         ? body.presetAmounts.map(Number).filter((n) => Number.isFinite(n) && n > 0)
         : current.presetAmounts,
     };
-    saveSiteSettings(next);
+    await saveSiteSettings(next);
     return Response.json({ settings: next });
   } catch (error) {
     return jsonError(error);

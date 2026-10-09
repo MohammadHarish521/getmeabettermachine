@@ -9,6 +9,7 @@ import {
   unmarkWebhookProcessed,
 } from "@/lib/payments";
 import { unwrapDodoWebhook } from "@/lib/dodo";
+import { reportDodoPaymentToDataFast } from "@/lib/datafast-revenue";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     const eventId =
       headers["webhook-id"] || `${event.type}:${event.timestamp}:${Date.now()}`;
-    if (!markWebhookProcessed(eventId)) {
+    if (!(await markWebhookProcessed(eventId))) {
       return new Response("", { status: 202 });
     }
 
@@ -67,30 +68,46 @@ export async function POST(request: Request) {
           ? String((data as { checkout_session_id?: unknown }).checkout_session_id ?? "")
           : "";
 
-      const payment = findPaymentForWebhook({
+      const payment = await findPaymentForWebhook({
         paymentId: metadataString(paymentMeta, "paymentId"),
         dodoPaymentId: dodoPaymentId || null,
         sessionId: sessionId || null,
       });
 
-      if (event.type === "payment.succeeded" && payment) {
-        confirmPayment(payment.id, {
-          dodoPaymentId: dodoPaymentId || null,
-        });
+      if (event.type === "payment.succeeded") {
+        if (payment) {
+          await confirmPayment(payment.id, {
+            dodoPaymentId: dodoPaymentId || null,
+          });
+        }
+        if (data && typeof data === "object") {
+          const paid = data as {
+            payment_id?: string;
+            total_amount?: number;
+            currency?: string;
+            metadata?: Record<string, unknown> | null;
+          };
+          await reportDodoPaymentToDataFast({
+            payment_id: paid.payment_id || dodoPaymentId,
+            total_amount: paid.total_amount,
+            currency: paid.currency,
+            metadata: paid.metadata ?? paymentMeta,
+          });
+        }
       }
 
       if (
         (event.type === "payment.failed" || event.type === "payment.cancelled") &&
         payment
       ) {
-        failPayment(payment.id);
+        await failPayment(payment.id);
       }
 
       if (event.type === "refund.succeeded" && payment) {
-        refundPayment(payment.id);
+        await refundPayment(payment.id);
       }
     } catch (error) {
-      unmarkWebhookProcessed(eventId);
+      await unmarkWebhookProcessed(eventId);
       throw error;
     }
 

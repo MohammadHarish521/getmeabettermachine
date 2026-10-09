@@ -40,20 +40,18 @@ export type CheckoutInput = {
   isAnonymous?: boolean;
 };
 
-function getPayment(id: string) {
-  return getDb()
-    .prepare("SELECT * FROM payments WHERE id = ?")
-    .get(id) as PaymentRow | undefined;
+async function getPayment(id: string) {
+  const db = await getDb();
+  return db.prepare("SELECT * FROM payments WHERE id = ?").get<PaymentRow>(id);
 }
 
-function getSponsor(id: string) {
-  return getDb()
-    .prepare("SELECT * FROM sponsors WHERE id = ?")
-    .get(id) as SponsorRow | undefined;
+async function getSponsor(id: string) {
+  const db = await getDb();
+  return db.prepare("SELECT * FROM sponsors WHERE id = ?").get<SponsorRow>(id);
 }
 
-function parseAmount(raw: unknown, floor: number) {
-  const settings = getSiteSettings();
+async function parseAmount(raw: unknown, floor: number) {
+  const settings = await getSiteSettings();
   const value =
     raw === undefined || raw === null || raw === ""
       ? floor
@@ -86,10 +84,10 @@ export async function createSponsorshipCheckout(
 ) {
   const spotId = typeof input.spotId === "string" ? input.spotId.trim() : "";
   if (!spotId) throw new HttpError(400, "Pick a spot on the machine first.");
-  const spot = getSpot(spotId);
+  const spot = await getSpot(spotId);
   if (!spot) throw new HttpError(404, "That spot does not exist.");
 
-  const amount = parseAmount(input.amount, nextSpotPrice(spot));
+  const amount = await parseAmount(input.amount, nextSpotPrice(spot));
   const website = normalizeSponsorUrl(String(input.website ?? ""));
   const meta = await fetchListingMeta(website);
   const host = hostnameFromUrl(website);
@@ -107,9 +105,11 @@ export async function createSponsorshipCheckout(
   const shownName = isAnonymous ? "Anonymous" : name;
   const storedLogo = logoUrl || letterLogo(shownName);
 
-  const open = getDb().transaction(() => {
-    holdSpot(spotId, paymentId, amount);
-    getDb()
+  const db = await getDb();
+  await db.transaction(async () => {
+    await holdSpot(spotId, paymentId, amount);
+    const database = await getDb();
+    await database
       .prepare(
         `INSERT INTO sponsors (
            id, name, company, website, x_url, logo_url, message, amount, currency,
@@ -133,7 +133,7 @@ export async function createSponsorshipCheckout(
         createdAt,
       );
 
-    getDb()
+    await database
       .prepare(
         `INSERT INTO payments (
            id, sponsor_id, amount, status, provider, created_at
@@ -141,7 +141,6 @@ export async function createSponsorshipCheckout(
       )
       .run(paymentId, sponsorId, amount, provider, createdAt);
   });
-  open();
 
   return finalizeCheckout({
     paymentId,
@@ -171,12 +170,13 @@ async function finalizeCheckout(input: {
         datafastVisitorId: input.datafastVisitorId,
       });
 
-      getDb()
+      const db = await getDb();
+      await db
         .prepare(
           "UPDATE payments SET dodo_session_id = ?, checkout_url = ? WHERE id = ?",
         )
         .run(checkout.id, checkout.url, input.paymentId);
-      getDb()
+      await db
         .prepare(
           "UPDATE sponsors SET checkout_id = ?, updated_at = ? WHERE id = ?",
         )
@@ -189,7 +189,7 @@ async function finalizeCheckout(input: {
         mock: false,
       };
     } catch (error) {
-      markCheckoutFailed(input.paymentId, input.sponsorId);
+      await markCheckoutFailed(input.paymentId, input.sponsorId);
       console.error("Dodo checkout failed", error);
       if (dodoErrorCode(error) === "REQUEST_AMOUNT_BELOW_MINIMUM") {
         throw new HttpError(
@@ -202,7 +202,8 @@ async function finalizeCheckout(input: {
   }
 
   const checkoutUrl = `${getAppUrl()}/sponsor/mock/${input.paymentId}`;
-  getDb()
+  const db = await getDb();
+  await db
     .prepare("UPDATE payments SET checkout_url = ? WHERE id = ?")
     .run(checkoutUrl, input.paymentId);
 
@@ -214,25 +215,27 @@ async function finalizeCheckout(input: {
   };
 }
 
-function markCheckoutFailed(paymentId: string, sponsorId: string) {
-  const apply = getDb().transaction(() => {
-    getDb().prepare("UPDATE payments SET status = 'failed' WHERE id = ?").run(paymentId);
-    getDb()
+async function markCheckoutFailed(paymentId: string, sponsorId: string) {
+  const db = await getDb();
+  await db.transaction(async () => {
+    const database = await getDb();
+    await database.prepare("UPDATE payments SET status = 'failed' WHERE id = ?").run(paymentId);
+    await database
       .prepare("UPDATE sponsors SET status = 'failed', updated_at = ? WHERE id = ?")
       .run(nowIso(), sponsorId);
-    clearSpotPending(paymentId);
+    await clearSpotPending(paymentId);
   });
-  apply();
 }
 
-function insertActivity(input: {
+async function insertActivity(input: {
   type: "sponsor" | "unlock";
   sponsorId?: string | null;
   tierId?: string | null;
   amount?: number | null;
   label: string;
 }) {
-  getDb()
+  const db = await getDb();
+  await db
     .prepare(
       `INSERT INTO activity_events (id, type, sponsor_id, tier_id, amount, label, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -248,22 +251,23 @@ function insertActivity(input: {
     );
 }
 
-function paidRaised() {
-  const row = getDb()
+async function paidRaised() {
+  const db = await getDb();
+  const row = await db
     .prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM sponsors WHERE status = 'paid'")
-    .get() as { total: number };
-  return Number(row.total) || 0;
+    .get<{ total: number }>();
+  return Number(row?.total) || 0;
 }
 
-function recordUnlocks(previousRaised: number, nextRaised: number) {
-  const tiers = listMachineTiers();
+async function recordUnlocks(previousRaised: number, nextRaised: number) {
+  const tiers = await listMachineTiers();
   const before = resolveFunding(previousRaised, tiers);
   const after = resolveFunding(nextRaised, tiers);
   const newly = after.unlocked.filter(
     (tier) => !before.unlocked.some((item) => item.id === tier.id),
   );
   for (const tier of newly) {
-    insertActivity({
+    await insertActivity({
       type: "unlock",
       tierId: tier.id,
       label: `${tier.chip} ${memoryLabel(tier.memory)} configuration unlocked`,
@@ -275,16 +279,17 @@ function memoryLabel(memory: string) {
   return memory.replace(/unified memory/i, "").trim();
 }
 
-export function confirmPayment(
+export async function confirmPayment(
   paymentId: string,
   extras: { dodoPaymentId?: string | null; dodoSessionId?: string | null } = {},
 ) {
-  const apply = getDb().transaction(() => {
-    const payment = getPayment(paymentId);
+  const db = await getDb();
+  return db.transaction(async () => {
+    const payment = await getPayment(paymentId);
     if (!payment) throw new HttpError(404, "Payment not found.");
 
     if (payment.status === "succeeded") {
-      const sponsor = getSponsor(payment.sponsor_id);
+      const sponsor = await getSponsor(payment.sponsor_id);
       if (!sponsor) throw new HttpError(404, "Sponsor not found.");
       return { alreadyProcessed: true, payment, sponsor };
     }
@@ -293,13 +298,14 @@ export function confirmPayment(
       throw new HttpError(409, "This payment can no longer be confirmed.");
     }
 
-    const sponsor = getSponsor(payment.sponsor_id);
+    const sponsor = await getSponsor(payment.sponsor_id);
     if (!sponsor) throw new HttpError(404, "Sponsor not found.");
 
     const processedAt = nowIso();
-    const previousRaised = paidRaised();
+    const previousRaised = await paidRaised();
+    const database = await getDb();
 
-    getDb()
+    await database
       .prepare(
         `UPDATE payments
          SET status = 'succeeded',
@@ -315,7 +321,7 @@ export function confirmPayment(
         payment.id,
       );
 
-    getDb()
+    await database
       .prepare(
         `UPDATE sponsors
          SET status = 'paid', is_visible = 1, updated_at = ?
@@ -323,15 +329,15 @@ export function confirmPayment(
       )
       .run(processedAt, sponsor.id);
 
-    const updatedSponsor = getSponsor(sponsor.id)!;
-    const updatedPayment = getPayment(payment.id)!;
+    const updatedSponsor = (await getSponsor(sponsor.id))!;
+    const updatedPayment = (await getPayment(payment.id))!;
     const name = displayNameFor(updatedSponsor);
-    const spot = updatedSponsor.spot_id ? getSpot(updatedSponsor.spot_id) : null;
+    const spot = updatedSponsor.spot_id ? await getSpot(updatedSponsor.spot_id) : null;
     if (updatedSponsor.spot_id) {
-      occupySpot(updatedSponsor.spot_id, sponsor.id, sponsor.amount);
+      await occupySpot(updatedSponsor.spot_id, sponsor.id, sponsor.amount);
     }
 
-    insertActivity({
+    await insertActivity({
       type: "sponsor",
       sponsorId: sponsor.id,
       amount: sponsor.amount,
@@ -340,7 +346,7 @@ export function confirmPayment(
         : `${name} sponsored ${formatUsd(sponsor.amount)}`,
     });
 
-    recordUnlocks(previousRaised, previousRaised + sponsor.amount);
+    await recordUnlocks(previousRaised, previousRaised + sponsor.amount);
 
     return {
       alreadyProcessed: false,
@@ -348,73 +354,74 @@ export function confirmPayment(
       sponsor: updatedSponsor,
     };
   });
-
-  return apply();
 }
 
-export function failPayment(paymentId: string) {
-  const apply = getDb().transaction(() => {
-    const payment = getPayment(paymentId);
+export async function failPayment(paymentId: string) {
+  const db = await getDb();
+  await db.transaction(async () => {
+    const payment = await getPayment(paymentId);
     if (!payment || payment.status !== "pending") return;
     const processedAt = nowIso();
-    getDb()
+    const database = await getDb();
+    await database
       .prepare("UPDATE payments SET status = 'failed', processed_at = ? WHERE id = ?")
       .run(processedAt, payment.id);
-    getDb()
+    await database
       .prepare("UPDATE sponsors SET status = 'failed', updated_at = ? WHERE id = ?")
       .run(processedAt, payment.sponsor_id);
-    clearSpotPending(payment.id);
+    await clearSpotPending(payment.id);
   });
-  apply();
 }
 
-export function refundPayment(paymentId: string) {
-  const apply = getDb().transaction(() => {
-    const payment = getPayment(paymentId);
+export async function refundPayment(paymentId: string) {
+  const db = await getDb();
+  await db.transaction(async () => {
+    const payment = await getPayment(paymentId);
     if (!payment) return;
     if (payment.status !== "succeeded" && payment.status !== "pending") return;
     const processedAt = nowIso();
-    getDb()
+    const database = await getDb();
+    await database
       .prepare("UPDATE payments SET status = 'failed', processed_at = ? WHERE id = ?")
       .run(processedAt, payment.id);
-    getDb()
+    await database
       .prepare(
         "UPDATE sponsors SET status = 'refunded', is_visible = 0, updated_at = ? WHERE id = ?",
       )
       .run(processedAt, payment.sponsor_id);
-    clearSpotPending(payment.id);
-    clearSpotOccupant(payment.sponsor_id);
+    await clearSpotPending(payment.id);
+    await clearSpotOccupant(payment.sponsor_id);
   });
-  apply();
 }
 
-export function findPaymentForWebhook(input: {
+export async function findPaymentForWebhook(input: {
   paymentId?: string | null;
   sessionId?: string | null;
   dodoPaymentId?: string | null;
 }) {
-  const db = getDb();
+  const db = await getDb();
   if (input.sessionId) {
-    const bySession = db
+    const bySession = await db
       .prepare("SELECT * FROM payments WHERE dodo_session_id = ?")
-      .get(input.sessionId) as PaymentRow | undefined;
+      .get<PaymentRow>(input.sessionId);
     if (bySession) return bySession;
   }
   if (input.paymentId) {
-    const byId = getPayment(input.paymentId);
+    const byId = await getPayment(input.paymentId);
     if (byId) return byId;
   }
   if (input.dodoPaymentId) {
-    const byDodo = db
+    const byDodo = await db
       .prepare("SELECT * FROM payments WHERE dodo_payment_id = ?")
-      .get(input.dodoPaymentId) as PaymentRow | undefined;
+      .get<PaymentRow>(input.dodoPaymentId);
     if (byDodo) return byDodo;
   }
   return null;
 }
 
-export function markWebhookProcessed(eventId: string) {
-  const result = getDb()
+export async function markWebhookProcessed(eventId: string) {
+  const db = await getDb();
+  const result = await db
     .prepare(
       "INSERT OR IGNORE INTO processed_webhooks (event_id, processed_at) VALUES (?, ?)",
     )
@@ -422,22 +429,23 @@ export function markWebhookProcessed(eventId: string) {
   return result.changes > 0;
 }
 
-export function unmarkWebhookProcessed(eventId: string) {
-  getDb().prepare("DELETE FROM processed_webhooks WHERE event_id = ?").run(eventId);
+export async function unmarkWebhookProcessed(eventId: string) {
+  const db = await getDb();
+  await db.prepare("DELETE FROM processed_webhooks WHERE event_id = ?").run(eventId);
 }
 
-export function getPaymentById(id: string) {
+export async function getPaymentById(id: string) {
   return getPayment(id);
 }
 
-export function getSponsorById(id: string) {
+export async function getSponsorById(id: string) {
   return getSponsor(id);
 }
 
-export function getPaymentPublicStatus(id: string) {
-  const payment = getPayment(id);
+export async function getPaymentPublicStatus(id: string) {
+  const payment = await getPayment(id);
   if (!payment) throw new HttpError(404, "Payment not found.");
-  const sponsor = getSponsor(payment.sponsor_id);
+  const sponsor = await getSponsor(payment.sponsor_id);
   return {
     payment: {
       id: payment.id,

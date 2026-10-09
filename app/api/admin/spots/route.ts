@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     await requireAdmin();
-    return Response.json({ spots: listPublicSpots() });
+    return Response.json({ spots: await listPublicSpots() });
   } catch (error) {
     return jsonError(error);
   }
@@ -19,8 +19,8 @@ export async function POST(request: Request) {
     await requireAdmin();
     const body = (await request.json()) as { action?: string };
     if (body.action === "reset") {
-      upsertDefaultSpots();
-      return Response.json({ spots: listPublicSpots() });
+      await upsertDefaultSpots();
+      return Response.json({ spots: await listPublicSpots() });
     }
     throw new HttpError(400, "Unknown action.");
   } catch (error) {
@@ -36,8 +36,8 @@ export async function PATCH(request: Request) {
     if (typeof body.basePrice !== "number" || body.basePrice < 1) {
       throw new HttpError(400, "basePrice must be a positive dollar amount.");
     }
-    updateSpotPrice(body.id, Math.round(body.basePrice));
-    return Response.json({ spots: listPublicSpots() });
+    await updateSpotPrice(body.id, Math.round(body.basePrice));
+    return Response.json({ spots: await listPublicSpots() });
   } catch (error) {
     return jsonError(error);
   }
