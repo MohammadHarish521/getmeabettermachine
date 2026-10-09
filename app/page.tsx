@@ -9,13 +9,18 @@ import { WhySection } from "@/components/site/WhySection";
 import { LiveActivity } from "@/components/site/LiveActivity";
 import { SocialProof } from "@/components/site/SocialProof";
 import { Footer } from "@/components/site/Footer";
+import { getDataFastStats } from "@/lib/datafast-stats";
 import { getHomeSnapshot } from "@/lib/queries";
 import { getXProfile } from "@/lib/x-profile";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [data, profile] = await Promise.all([getHomeSnapshot(), getXProfile()]);
+  const [data, profile, stats] = await Promise.all([
+    getHomeSnapshot(),
+    getXProfile(),
+    getDataFastStats(),
+  ]);
 
   return (
     <SponsorProvider spots={data.spots}>
@@ -30,6 +35,7 @@ export default async function Page() {
               ? new Intl.NumberFormat("en-US", { notation: "compact" }).format(profile.followers)
               : null
           }
+          stats={stats}
         />
         <SocialProof
           settings={{

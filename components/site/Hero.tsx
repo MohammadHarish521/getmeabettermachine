@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SpotStage } from "@/components/site/SpotStage";
 import { LAST_YEAR_ON_X } from "@/components/site/SocialProof";
 import { formatUsd } from "@/lib/format";
+import type { DataFastStats } from "@/lib/datafast-stats";
 import type { FundingState, PublicSponsor, PublicSpot } from "@/lib/types";
 
 export function Hero({
@@ -11,11 +12,13 @@ export function Hero({
   spots,
   founder,
   followers,
+  stats,
 }: {
   funding: FundingState;
   spots: PublicSpot[];
   founder: PublicSponsor | null;
   followers: string | null;
+  stats: DataFastStats | null;
 }) {
   const goal = funding.next?.amountRequired ?? funding.tiers.at(-1)?.amountRequired ?? 1;
   const progress = Math.min(100, Math.max(0, (funding.raised / goal) * 100));
@@ -39,27 +42,46 @@ export function Hero({
 
   return (
     <section className="mx-auto flex max-w-[1120px] flex-col items-center px-5 pt-14 pb-16 text-center sm:px-6 md:pt-16">
-      <p className="mb-6 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2 text-[14px] text-mute">
-        <span>
-          <span className="mr-1.5 text-[32px] font-semibold tracking-[-0.04em] text-green tabular-nums">
-            {LAST_YEAR_ON_X[0]?.value}
-          </span>
-          impressions
+      <div className="mb-8 flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[14px] text-mute">
+        {stats ? (
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2 shrink-0 rounded-full bg-green" aria-hidden="true" />
+              <span className="font-semibold text-green tabular-nums">
+                {formatCount(stats.live)}
+              </span>
+              online now
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="font-semibold text-ink tabular-nums">
+                {formatCount(stats.visitors)}
+              </span>
+              visitors
+            </span>
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className="font-semibold text-ink tabular-nums">
+                {formatCount(stats.views)}
+              </span>
+              views
+            </span>
+            <span aria-hidden="true" className="hidden h-4 w-px bg-line sm:block" />
+          </>
+        ) : null}
+        <span className="inline-flex items-baseline gap-1.5">
+          <span className="font-semibold text-ink tabular-nums">{LAST_YEAR_ON_X[0]?.value}</span>
+          impressions last year on X
         </span>
-        <span>
-          <span className="mr-1.5 font-semibold text-ink tabular-nums">
-            {LAST_YEAR_ON_X[1]?.value}
-          </span>
+        <span className="inline-flex items-baseline gap-1.5">
+          <span className="font-semibold text-ink tabular-nums">{LAST_YEAR_ON_X[1]?.value}</span>
           engagements
         </span>
-        <span className="text-[12px] tracking-[0.04em] uppercase">Last year on X</span>
         {followers ? (
-          <span>
-            <span className="mr-1.5 font-semibold text-ink tabular-nums">{followers}</span>
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className="font-semibold text-ink tabular-nums">{followers}</span>
             followers
           </span>
         ) : null}
-      </p>
+      </div>
       <h1 className="display mx-auto max-w-[18ch]">Help me build on a better Mac.</h1>
       <p className="mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-mute">
         Brands don’t donate. They take a numbered sticker on the computer I’ll
@@ -89,4 +111,9 @@ export function Hero({
       </div>
     </section>
   );
+}
+
+function formatCount(value: number | null) {
+  if (value == null) return "—";
+  return value.toLocaleString("en-US");
 }
