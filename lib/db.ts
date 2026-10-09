@@ -20,7 +20,9 @@ export function getDb() {
     const configured = env("DB_PATH");
     const dbPath = configured
       ? path.resolve(/* turbopackIgnore: true */ process.cwd(), configured)
-      : path.join(process.cwd(), "data", "raise-my-mac.db");
+      : process.env.VERCEL
+        ? path.join("/tmp", "raise-my-mac.db")
+        : path.join(process.cwd(), "data", "raise-my-mac.db");
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
     const created = new Database(dbPath);
