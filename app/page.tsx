@@ -12,7 +12,7 @@ import { getDataFastStats } from "@/lib/datafast-stats";
 import { getHomeSnapshot } from "@/lib/queries";
 import { getXProfile } from "@/lib/x-profile";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 20;
 
 export default async function Page() {
   const [data, profile, stats] = await Promise.all([

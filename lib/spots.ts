@@ -1,6 +1,6 @@
 import { SPOTS, SPOT_HOLD_MS, type SpotSurface } from "@/config/spots";
 import { FOUNDER_SPONSOR } from "@/config/site";
-import { ensureDefaultSpots, getDb, nowIso } from "@/lib/db";
+import { getDb, nowIso } from "@/lib/db";
 import { letterLogo, displayNameFor } from "@/lib/format";
 import { HttpError } from "@/lib/http";
 import type { PublicSpot, PublicSponsor, SponsorRow } from "@/lib/types";
@@ -49,7 +49,6 @@ export function nextSpotPrice(spot: SpotRow) {
 }
 
 export async function listPublicSpots(): Promise<PublicSpot[]> {
-  await ensureDefaultSpots();
   const rows = await listSpotRows();
   const occupantIds = rows
     .map((row) => row.occupant_sponsor_id)

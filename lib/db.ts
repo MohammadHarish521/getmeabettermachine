@@ -263,8 +263,8 @@ async function migrate(db: SqlDb) {
   `);
 
   await seedTiersIfEmpty(db);
-  await syncTierPrices(db);
-  await upsertDefaultSpots(db);
+  await seedSpotsIfEmpty(db);
+  await ensureDefaultSpots(db);
   await seedSettingsIfEmpty(db);
   await addColumn(db, "sponsors", "spot_id", "TEXT");
   await addColumn(db, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
@@ -382,6 +382,25 @@ export async function upsertDefaultSpots(db?: SqlDb) {
 export async function ensureDefaultSpots(db?: SqlDb) {
   const database = db ?? (await getDb());
   await addColumn(database, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
+  const existing = await database
+    .prepare("SELECT id FROM spots")
+    .all<{ id: string }>();
+  const have = new Set(existing.map((row) => row.id));
+  const missing = SPOTS.filter((spot) => !have.has(spot.id));
+  const unused = [
+    "front-port-left",
+    "front-port-right",
+    "back-port-left",
+    "back-port-right",
+    "back-center",
+  ].filter((id) => have.has(id));
+  const unusedSurfaces = existing.some((row) => {
+    const spot = SPOTS.find((item) => item.id === row.id);
+    return !spot && (row.id.includes("keyboard") || row.id.includes("trackpad"));
+  });
+
+  if (missing.length === 0 && unused.length === 0 && !unusedSurfaces) return;
+
   const insert = database.prepare(
     `INSERT INTO spots (
        id, sort_order, number, name, description, base_price, size, surface, x, y,
@@ -391,7 +410,7 @@ export async function ensureDefaultSpots(db?: SqlDb) {
   );
 
   await database.transaction(async () => {
-    for (const spot of SPOTS) {
+    for (const spot of missing) {
       await insert.run(
         spot.id,
         spot.number,
@@ -405,24 +424,24 @@ export async function ensureDefaultSpots(db?: SqlDb) {
         spot.y,
       );
     }
-    await database
-      .prepare(
-        `DELETE FROM spots
-         WHERE surface IN ('keyboard', 'trackpad')
-           AND occupant_sponsor_id IS NULL`,
-      )
-      .run();
-    await database
-      .prepare(
-        `DELETE FROM spots
-         WHERE id IN (
-           'front-port-left', 'front-port-right',
-           'back-port-left', 'back-port-right',
-           'back-center'
-         )
-           AND occupant_sponsor_id IS NULL`,
-      )
-      .run();
+    if (unusedSurfaces) {
+      await database
+        .prepare(
+          `DELETE FROM spots
+           WHERE surface IN ('keyboard', 'trackpad')
+             AND occupant_sponsor_id IS NULL`,
+        )
+        .run();
+    }
+    if (unused.length > 0) {
+      await database
+        .prepare(
+          `DELETE FROM spots
+           WHERE id IN (${unused.map(() => "?").join(",")})
+             AND occupant_sponsor_id IS NULL`,
+        )
+        .run(...unused);
+    }
   });
 }
 

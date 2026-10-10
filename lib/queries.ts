@@ -5,8 +5,7 @@ import { resolveFunding } from "@/lib/funding";
 import { getSiteSettings } from "@/lib/settings";
 import { isDodoConfigured } from "@/lib/dodo";
 import { listMachineTiers } from "@/lib/tiers";
-import { syncPendingDodoPayment } from "@/lib/payments";
-import { isSpotHeld, listPublicSpots, listSpotRows } from "@/lib/spots";
+import { listPublicSpots, listSpotRows } from "@/lib/spots";
 import { FOUNDER_SPONSOR } from "@/config/site";
 import type {
   ActivityItem,
@@ -16,21 +15,16 @@ import type {
 } from "@/lib/types";
 
 export const getHomeSnapshot = cache(async () => {
-  const held = await listSpotRows();
-  for (const spot of held) {
-    if (spot.pending_payment_id && isSpotHeld(spot)) {
-      await syncPendingDodoPayment(spot.pending_payment_id);
-    }
-  }
-
-  const tiers = await listMachineTiers();
-  const raised = await paidRaised();
+  const [tiers, raised, sponsors, spots, activity, settings] = await Promise.all([
+    listMachineTiers(),
+    paidRaised(),
+    listVisibleSponsors(),
+    listPublicSpots(),
+    listActivity(12),
+    getSiteSettings(),
+  ]);
   const funding = resolveFunding(raised, tiers);
-  const sponsors = await listVisibleSponsors();
-  const spots = await listPublicSpots();
   const stats = sponsorStats(sponsors, raised);
-  const activity = await listActivity(12);
-  const settings = await getSiteSettings();
 
   return {
     funding,
