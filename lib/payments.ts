@@ -18,7 +18,7 @@ import {
   normalizeSponsorUrl,
   normalizeXUrl,
 } from "@/lib/urls";
-import { fetchListingMeta } from "@/lib/listing-meta";
+import { cachedListingMeta, fetchListingMeta } from "@/lib/listing-meta";
 import {
   clearSpotOccupant,
   clearSpotPending,
@@ -90,7 +90,11 @@ export async function createSponsorshipCheckout(
 
   const amount = await parseAmount(input.amount, nextSpotPrice(spot));
   const website = normalizeSponsorUrl(String(input.website ?? ""));
-  const meta = await fetchListingMeta(website);
+  const meta = cachedListingMeta(website) ?? {
+    title: null,
+    description: null,
+    image: null,
+  };
   const host = hostnameFromUrl(website);
   const name = clip(meta.title || host, 80) || "Sponsor";
   const company = clip(host, 80);
@@ -151,6 +155,37 @@ export async function createSponsorshipCheckout(
     provider,
     datafastVisitorId: input.datafastVisitorId,
   });
+}
+
+export async function enrichSponsorListing(sponsorId: string) {
+  const sponsor = await getSponsor(sponsorId);
+  if (!sponsor?.website || sponsor.is_anonymous) return;
+
+  const meta = await fetchListingMeta(sponsor.website);
+  const host = hostnameFromUrl(sponsor.website);
+  const name = clip(meta.title || sponsor.name || host, 80) || "Sponsor";
+  const message = clip(meta.description ?? sponsor.message ?? "", 280);
+  const logoUrl =
+    meta.image && sponsor.logo_url.startsWith("data:")
+      ? meta.image
+      : sponsor.logo_url;
+
+  if (
+    name === sponsor.name &&
+    message === sponsor.message &&
+    logoUrl === sponsor.logo_url
+  ) {
+    return;
+  }
+
+  const db = await getDb();
+  await db
+    .prepare(
+      `UPDATE sponsors
+       SET name = ?, company = ?, message = ?, logo_url = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+    .run(name, clip(host, 80), message, logoUrl, nowIso(), sponsor.id);
 }
 
 async function finalizeCheckout(input: {

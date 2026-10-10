@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ensureDataFast } from "@/lib/datafast";
 import { formatUsd } from "@/lib/format";
 import { SURFACE_LABEL } from "@/config/spots";
 import { SiteLogo } from "@/components/site/SiteLogo";
@@ -58,7 +57,11 @@ export function SponsorModal({
       setPreview("");
       return;
     }
-    const timer = window.setTimeout(() => setPreview(value), 400);
+    const timer = window.setTimeout(() => {
+      setPreview(value);
+      const params = new URLSearchParams({ u: value });
+      void fetch(`/api/listing-meta?${params}`).catch(() => {});
+    }, 400);
     return () => window.clearTimeout(timer);
   }, [website]);
 
@@ -73,7 +76,6 @@ export function SponsorModal({
     setError(null);
     setPending(true);
     try {
-      await ensureDataFast();
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },

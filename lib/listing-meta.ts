@@ -3,6 +3,29 @@ import { isPrivateHost } from "@/lib/urls";
 const FETCH_MS = 3500;
 const TITLE_MAX = 80;
 const DESCRIPTION_MAX = 220;
+const CACHE_MS = 10 * 60_000;
+
+const listingCache = new Map<string, { at: number; meta: ListingMeta }>();
+
+function cacheKey(url: string) {
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+export function cachedListingMeta(url: string): ListingMeta | null {
+  const hit = listingCache.get(cacheKey(url));
+  if (!hit || Date.now() - hit.at > CACHE_MS) return null;
+  return hit.meta;
+}
+
+function rememberListingMeta(url: string, meta: ListingMeta) {
+  listingCache.set(cacheKey(url), { at: Date.now(), meta });
+}
 
 export type ListingMeta = {
   title: string | null;
@@ -20,6 +43,9 @@ export async function fetchListingMeta(url: string): Promise<ListingMeta> {
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return empty;
   if (isPrivateHost(parsed.hostname)) return empty;
+
+  const cached = cachedListingMeta(parsed.toString());
+  if (cached) return cached;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_MS);
@@ -47,7 +73,9 @@ export async function fetchListingMeta(url: string): Promise<ListingMeta> {
       parsed,
       meta(html, ["og:image", "twitter:image", "twitter:image:src"]),
     );
-    return { title, description, image };
+    const result = { title, description, image };
+    rememberListingMeta(parsed.toString(), result);
+    return result;
   } catch {
     return empty;
   } finally {

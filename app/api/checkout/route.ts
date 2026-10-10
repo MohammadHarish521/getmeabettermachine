@@ -1,6 +1,10 @@
+import { after } from "next/server";
 import { cookies } from "next/headers";
 import { jsonError } from "@/lib/http";
-import { createSponsorshipCheckout } from "@/lib/payments";
+import {
+  createSponsorshipCheckout,
+  enrichSponsorListing,
+} from "@/lib/payments";
 import { assertProductionPayments } from "@/lib/dodo";
 import { datafastVisitorId } from "@/lib/datafast-id";
 
@@ -17,6 +21,7 @@ export async function POST(request: Request) {
       website: typeof body.website === "string" ? body.website : "",
       datafastVisitorId: datafastVisitorId(jar.get("datafast_visitor_id")?.value),
     });
+    after(() => enrichSponsorListing(result.sponsorId));
     return Response.json(result, { status: 201 });
   } catch (error) {
     return jsonError(error);
