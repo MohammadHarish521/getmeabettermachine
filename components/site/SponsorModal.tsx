@@ -138,18 +138,33 @@ export function SponsorModal({
               <li>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-blue bg-blue-soft px-3 py-3 text-left transition-colors hover:bg-blue hover:text-white [&:hover_span]:text-white"
+                  className={
+                    anyHeld
+                      ? "flex w-full items-center justify-between rounded-xl border border-[#c98900] bg-[#fff6e0] px-3 py-3 text-left"
+                      : "flex w-full items-center justify-between rounded-xl border border-blue bg-blue-soft px-3 py-3 text-left transition-colors hover:bg-blue hover:text-white [&:hover_span]:text-white"
+                  }
+                  disabled={anyHeld}
                   onClick={() => onPickSpot(ALL_SPOTS_ID)}
                 >
-                  <span className="font-medium text-blue">
-                    Take all {spots.length} spots
-                    <span className="mt-0.5 block text-[12px] font-normal text-blue/80">
-                      Every sticker in one checkout
+                  <span className={anyHeld ? "font-medium text-[#8a5a00]" : "font-medium text-blue"}>
+                    {anyHeld ? "Someone is checking out" : `Take all ${spots.length} spots`}
+                    <span
+                      className={
+                        anyHeld
+                          ? "mt-0.5 block text-[12px] font-normal text-[#8a5a00]/80"
+                          : "mt-0.5 block text-[12px] font-normal text-blue/80"
+                      }
+                    >
+                      {anyHeld
+                        ? "Wait a few minutes if they don’t finish."
+                        : "Every sticker in one checkout"}
                     </span>
                   </span>
-                  <span className="text-[14px] font-semibold tabular-nums text-blue">
-                    {formatUsd(allTotal)}
-                  </span>
+                  {anyHeld ? null : (
+                    <span className="text-[14px] font-semibold tabular-nums text-blue">
+                      {formatUsd(allTotal)}
+                    </span>
+                  )}
                 </button>
               </li>
             ) : null}
@@ -157,18 +172,31 @@ export function SponsorModal({
               <li key={item.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-line px-3 py-3 text-left hover:border-line-strong"
+                  className={
+                    item.held
+                      ? "flex w-full items-center justify-between rounded-xl border border-[#c98900] bg-[#fff6e0] px-3 py-3 text-left"
+                      : "flex w-full items-center justify-between rounded-xl border border-line px-3 py-3 text-left hover:border-line-strong"
+                  }
+                  disabled={item.held}
                   onClick={() => onPickSpot(item.id)}
                 >
                   <span>
                     <span className="mr-2 text-mute tabular-nums">{item.number}</span>
                     {item.name}
                     <span className="mt-0.5 block text-[12px] text-dim">
-                      {SURFACE_LABEL[item.surface]}
+                      {item.held
+                        ? "Someone is checking out"
+                        : SURFACE_LABEL[item.surface]}
                     </span>
                   </span>
-                  <span className="text-[13px] tabular-nums text-mute">
-                    {formatUsd(item.nextPrice)}
+                  <span
+                    className={
+                      item.held
+                        ? "text-[13px] font-medium text-[#8a5a00]"
+                        : "text-[13px] tabular-nums text-mute"
+                    }
+                  >
+                    {item.held ? "Checking out" : formatUsd(item.nextPrice)}
                   </span>
                 </button>
               </li>
@@ -192,7 +220,7 @@ export function SponsorModal({
                   </span>
                 </p>
                 {anyHeld ? (
-                  <p className="text-[13px] text-mute">
+                  <p className="checkout-hold-note">
                     Someone is checking out a spot right now. Try again in a few minutes.
                   </p>
                 ) : null}
@@ -200,6 +228,11 @@ export function SponsorModal({
             ) : spot ? (
               <>
                 <p className="text-[14px] leading-6 text-mute">{spot.description}</p>
+                {spot.held ? (
+                  <p className="checkout-hold-note">
+                    Someone is checking out this spot right now. Try again in a few minutes.
+                  </p>
+                ) : null}
                 <p className="text-2xl font-semibold text-green tabular-nums">
                   {formatUsd(spot.nextPrice)}
                   {spot.occupant ? (
@@ -250,7 +283,12 @@ export function SponsorModal({
             <button
               type="submit"
               className="btn-primary w-full"
-              disabled={pending || !website.trim() || (takeAll && anyHeld)}
+              disabled={
+                pending ||
+                !website.trim() ||
+                (takeAll && anyHeld) ||
+                Boolean(spot?.held)
+              }
             >
               {pending
                 ? "Starting checkout…"

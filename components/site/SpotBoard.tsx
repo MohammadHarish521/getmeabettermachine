@@ -32,7 +32,11 @@ export function SpotBoard({
           </thead>
           <tbody>
             {spots.map((spot) => (
-              <tr key={spot.id} className="border-b border-line">
+              <tr
+                key={spot.id}
+                className="border-b border-line"
+                data-held={spot.held ? "true" : "false"}
+              >
                 <td className="py-4 pr-3">
                   <span className="spot-number">{spot.number}</span>
                 </td>
@@ -84,10 +88,10 @@ export function SpotBoard({
                   )}
                 </td>
                 <td className="py-4 pr-3">
-                  {spot.occupant ? (
+                  {spot.held ? (
+                    <span className="badge badge-held">Checking out</span>
+                  ) : spot.occupant ? (
                     <span className="badge badge-sold">Taken</span>
-                  ) : spot.held ? (
-                    <span className="badge badge-status">Held</span>
                   ) : (
                     <span className="badge badge-category">Open</span>
                   )}
@@ -99,7 +103,7 @@ export function SpotBoard({
                     onClick={() => openSponsor(spot.id)}
                     disabled={spot.held}
                   >
-                    {spot.held ? "Held" : spot.occupant ? "Take over" : "Take spot"}
+                    {spot.held ? "Checking out" : spot.occupant ? "Take over" : "Take spot"}
                   </button>
                 </td>
               </tr>

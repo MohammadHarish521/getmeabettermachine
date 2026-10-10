@@ -26,6 +26,8 @@ export function SpotStage({ spots }: { spots: PublicSpot[] }) {
   const [view, setView] = useState<StageView>("machine");
   const { openSponsor } = useSponsor();
   const allTotal = spots.reduce((sum, spot) => sum + spot.nextPrice, 0);
+  const heldCount = spots.filter((spot) => spot.held).length;
+  const anyHeld = heldCount > 0;
 
   const top = spots
     .filter((spot) => spot.surface === "stage")
@@ -65,17 +67,29 @@ export function SpotStage({ spots }: { spots: PublicSpot[] }) {
             <button
               type="button"
               className="take-all-btn"
+              data-held={anyHeld ? "true" : "false"}
+              disabled={anyHeld}
               onClick={() => openSponsor(ALL_SPOTS_ID)}
             >
-              Take all {spots.length} spots
-              <span className="take-all-price">{formatUsd(allTotal)}</span>
+              {anyHeld
+                ? heldCount === spots.length
+                  ? "Someone is checking out all spots"
+                  : `Someone is checking out ${heldCount} ${heldCount === 1 ? "spot" : "spots"}`
+                : `Take all ${spots.length} spots`}
+              {anyHeld ? null : (
+                <span className="take-all-price">{formatUsd(allTotal)}</span>
+              )}
             </button>
           ) : null}
         </div>
-        <p className="segmented-caption">
-          {view === "inventory"
-            ? "Every spot, who holds it, and what it costs to take over."
-            : "Tap any sticker to take that spot. Taken seats can be claimed for 1.5×."}
+        <p className="segmented-caption" data-held={anyHeld ? "true" : "false"}>
+          {anyHeld
+            ? heldCount === spots.length
+              ? "Someone is checking out every sticker. It frees up in a few minutes if they don’t finish."
+              : "Amber stickers are in checkout right now. They free up in a few minutes if that payment doesn’t finish."
+            : view === "inventory"
+              ? "Every spot, who holds it, and what it costs to take over."
+              : "Tap any sticker to take that spot. Taken seats can be claimed for 1.5×."}
         </p>
       </div>
 

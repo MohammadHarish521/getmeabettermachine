@@ -52,11 +52,16 @@ export function SpotTile({
         data-size={spot.size}
         style={style}
         onClick={() => openSponsor(spot.id)}
-        aria-label={`${spot.name}, ${formatUsd(spot.nextPrice)}`}
+        disabled={spot.held}
+        aria-label={
+          spot.held
+            ? `${spot.name}, someone is checking out`
+            : `${spot.name}, ${formatUsd(spot.nextPrice)}`
+        }
       >
         <span className="spot-sticker-empty">
           <span className="spot-sticker-price">
-            {spot.held ? "Held" : formatUsd(spot.nextPrice)}
+            {spot.held ? "Checking out" : formatUsd(spot.nextPrice)}
           </span>
         </span>
       </button>
@@ -78,6 +83,7 @@ export function SpotTile({
         className="spot-sticker-logo"
       />
       <SpotClicks count={clicks} />
+      {spot.held ? <span className="spot-hold-flag">Checking out</span> : null}
       <div className="spot-actions">
         {spot.occupant.website ? (
           <a
@@ -96,7 +102,7 @@ export function SpotTile({
           disabled={spot.held}
           onClick={() => openSponsor(spot.id)}
         >
-          {spot.held ? "Held" : "Take over"}
+          {spot.held ? "Checking out" : "Take over"}
           {!spot.held ? (
             <span className="spot-action-price">{formatUsd(spot.nextPrice)}</span>
           ) : null}
