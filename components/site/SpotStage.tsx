@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import { ALL_SPOTS_ID } from "@/config/spots";
+import { formatUsd } from "@/lib/format";
 import type { PublicSpot } from "@/lib/types";
 import { SpotBoard } from "@/components/site/SpotBoard";
+import { useSponsor } from "@/components/site/SponsorProvider";
 import { SpotTile } from "@/components/site/SpotTile";
 
 type StageView = "machine" | "inventory";
@@ -21,6 +24,8 @@ function tileStyle(spot: PublicSpot): CSSProperties {
 
 export function SpotStage({ spots }: { spots: PublicSpot[] }) {
   const [view, setView] = useState<StageView>("machine");
+  const { openSponsor } = useSponsor();
+  const allTotal = spots.reduce((sum, spot) => sum + spot.nextPrice, 0);
 
   const top = spots
     .filter((spot) => spot.surface === "stage")
@@ -59,6 +64,18 @@ export function SpotStage({ spots }: { spots: PublicSpot[] }) {
           {view === "inventory"
             ? "Every spot, who holds it, and what it costs to take over."
             : "Tap any sticker to take that spot. Taken seats can be claimed for 1.5×."}
+          {spots.length > 1 ? (
+            <>
+              {" "}
+              <button
+                type="button"
+                className="text-link cursor-pointer"
+                onClick={() => openSponsor(ALL_SPOTS_ID)}
+              >
+                Take all {spots.length} for {formatUsd(allTotal)}
+              </button>
+            </>
+          ) : null}
         </p>
       </div>
 

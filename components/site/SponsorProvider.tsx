@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { SponsorModal } from "@/components/site/SponsorModal";
+import { ALL_SPOTS_ID } from "@/config/spots";
 import type { PublicSpot } from "@/lib/types";
 
 type SponsorContextValue = {
@@ -61,7 +62,7 @@ export function SponsorProvider({
     (id?: string) => {
       setSpotId(id ?? null);
       setOpen(true);
-      if (id) recordClick(id);
+      if (id && id !== ALL_SPOTS_ID) recordClick(id);
     },
     [recordClick],
   );

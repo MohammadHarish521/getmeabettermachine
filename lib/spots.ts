@@ -133,6 +133,55 @@ export async function holdSpot(spotId: string, paymentId: string, amount: number
   return spot;
 }
 
+export const SPOT_BUSY_MESSAGE =
+  "Someone is checking out a spot right now. Try again in a few minutes.";
+
+/** Hold every listed spot for one payment and remember what each one costs. */
+export async function holdSpots(
+  paymentId: string,
+  parts: { id: string; price: number }[],
+) {
+  const db = await getDb();
+  const ids = parts.map((part) => part.id);
+  const cutoff = new Date(Date.now() - SPOT_HOLD_MS).toISOString();
+  const held = await db
+    .prepare(
+      `UPDATE spots SET pending_payment_id = ?, pending_at = ?
+       WHERE id IN (${ids.map(() => "?").join(",")})
+         AND (pending_payment_id IS NULL OR pending_at IS NULL OR pending_at < ?)`,
+    )
+    .run(paymentId, nowIso(), ...ids, cutoff);
+  if (held.changes !== ids.length) throw new HttpError(409, SPOT_BUSY_MESSAGE);
+
+  await db
+    .prepare(
+      `INSERT INTO payment_spots (payment_id, spot_id, amount)
+       VALUES ${parts.map(() => "(?, ?, ?)").join(", ")}`,
+    )
+    .run(...parts.flatMap((part) => [paymentId, part.id, part.price]));
+}
+
+/** Give the sponsor every spot held by this payment, at the price recorded for each. */
+export async function occupyHeldSpots(paymentId: string, sponsorId: string) {
+  const db = await getDb();
+  const paid = "(SELECT amount FROM payment_spots WHERE payment_id = ? AND spot_id = spots.id)";
+  await db
+    .prepare(
+      `UPDATE spots
+       SET occupant_sponsor_id = ?, current_amount = ${paid},
+           pending_payment_id = NULL, pending_at = NULL,
+           click_count = 0
+       WHERE id IN (SELECT spot_id FROM payment_spots WHERE payment_id = ?)
+         AND (occupant_sponsor_id IS NULL OR current_amount <= ${paid})`,
+    )
+    .run(sponsorId, paymentId, paymentId, paymentId);
+  await clearSpotPending(paymentId);
+  const row = await db
+    .prepare("SELECT COUNT(*) AS count FROM payment_spots WHERE payment_id = ?")
+    .get<{ count: number }>(paymentId);
+  return Number(row?.count) || 0;
+}
+
 export async function occupySpot(spotId: string, sponsorId: string, amount: number) {
   const spot = await getSpot(spotId);
   if (!spot) return;

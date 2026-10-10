@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ensureDataFast } from "@/lib/datafast";
 import { formatUsd } from "@/lib/format";
-import { SURFACE_LABEL } from "@/config/spots";
+import { ALL_SPOTS_ID, SURFACE_LABEL } from "@/config/spots";
 import { SiteLogo } from "@/components/site/SiteLogo";
 import type { PublicSpot } from "@/lib/types";
 
@@ -20,7 +20,11 @@ export function SponsorModal({
   spotId: string | null;
   onPickSpot: (id: string) => void;
 }) {
-  const spot = spots.find((item) => item.id === spotId) ?? null;
+  const takeAll = spotId === ALL_SPOTS_ID;
+  const spot = takeAll ? null : spots.find((item) => item.id === spotId) ?? null;
+  const allTotal = spots.reduce((sum, item) => sum + item.nextPrice, 0);
+  const takenCount = spots.filter((item) => item.occupant).length;
+  const anyHeld = spots.some((item) => item.held);
   const [website, setWebsite] = useState("");
   const [preview, setPreview] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +74,12 @@ export function SponsorModal({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!spot) {
+    const order = takeAll
+      ? { spotId: ALL_SPOTS_ID, amount: allTotal }
+      : spot
+        ? { spotId: spot.id, amount: spot.nextPrice }
+        : null;
+    if (!order) {
       setError("Pick a spot on the machine first.");
       return;
     }
@@ -81,11 +90,7 @@ export function SponsorModal({
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          spotId: spot.id,
-          amount: spot.nextPrice,
-          website,
-        }),
+        body: JSON.stringify({ ...order, website }),
       });
       const data = (await response.json()) as {
         checkoutUrl?: string;
@@ -114,7 +119,7 @@ export function SponsorModal({
           <div>
             <p className="eyebrow">Placement</p>
             <h2 id={titleId} className="mt-1 text-xl font-semibold">
-              {spot ? spot.name : "Pick a spot"}
+              {takeAll ? "All spots" : spot ? spot.name : "Pick a spot"}
             </h2>
           </div>
           <button
@@ -127,8 +132,27 @@ export function SponsorModal({
           </button>
         </div>
 
-        {!spot ? (
+        {!spot && !takeAll ? (
           <ul className="mt-5 space-y-2">
+            {spots.length > 1 ? (
+              <li>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-line-strong bg-charcoal px-3 py-3 text-left hover:border-ink/40"
+                  onClick={() => onPickSpot(ALL_SPOTS_ID)}
+                >
+                  <span>
+                    All {spots.length} spots
+                    <span className="mt-0.5 block text-[12px] text-dim">
+                      Every sticker in one checkout
+                    </span>
+                  </span>
+                  <span className="text-[13px] font-medium tabular-nums text-ink">
+                    {formatUsd(allTotal)}
+                  </span>
+                </button>
+              </li>
+            ) : null}
             {spots.map((item) => (
               <li key={item.id}>
                 <button
@@ -152,15 +176,40 @@ export function SponsorModal({
           </ul>
         ) : (
           <form className="mt-6 space-y-5" onSubmit={submit}>
-            <p className="text-[14px] leading-6 text-mute">{spot.description}</p>
-            <p className="text-2xl font-semibold text-green tabular-nums">
-              {formatUsd(spot.nextPrice)}
-              {spot.occupant ? (
-                <span className="ml-2 text-[13px] font-normal text-mute">
-                  to take over {spot.occupant.displayName}
-                </span>
-              ) : null}
-            </p>
+            {takeAll ? (
+              <>
+                <p className="text-[14px] leading-6 text-mute">
+                  Every sticker on the machine: the top, front, back, the power cable and the
+                  Magic Mouse. One checkout, one logo on all of them.
+                </p>
+                <p className="text-2xl font-semibold text-green tabular-nums">
+                  {formatUsd(allTotal)}
+                  <span className="ml-2 text-[13px] font-normal text-mute">
+                    for {spots.length} spots
+                    {takenCount > 0
+                      ? ` · ${takenCount} taken, counted at 1.5×`
+                      : ""}
+                  </span>
+                </p>
+                {anyHeld ? (
+                  <p className="text-[13px] text-mute">
+                    Someone is checking out a spot right now. Try again in a few minutes.
+                  </p>
+                ) : null}
+              </>
+            ) : spot ? (
+              <>
+                <p className="text-[14px] leading-6 text-mute">{spot.description}</p>
+                <p className="text-2xl font-semibold text-green tabular-nums">
+                  {formatUsd(spot.nextPrice)}
+                  {spot.occupant ? (
+                    <span className="ml-2 text-[13px] font-normal text-mute">
+                      to take over {spot.occupant.displayName}
+                    </span>
+                  ) : null}
+                </p>
+              </>
+            ) : null}
 
             <label className="block">
               <span className="text-[12px] text-mute">Your URL</span>
@@ -193,9 +242,13 @@ export function SponsorModal({
             <button
               type="submit"
               className="btn-primary w-full"
-              disabled={pending || !website.trim()}
+              disabled={pending || !website.trim() || (takeAll && anyHeld)}
             >
-              {pending ? "Starting checkout…" : `Take ${spot.name}`}
+              {pending
+                ? "Starting checkout…"
+                : takeAll
+                  ? `Take all ${spots.length} spots`
+                  : `Take ${spot?.name ?? "this spot"}`}
             </button>
           </form>
         )}

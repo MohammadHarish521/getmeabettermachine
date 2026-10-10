@@ -178,6 +178,13 @@ async function migrate(db: SqlDb) {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS payment_spots (
+      payment_id TEXT NOT NULL,
+      spot_id TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      PRIMARY KEY (payment_id, spot_id)
+    );
+
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,
       sponsor_id TEXT NOT NULL,

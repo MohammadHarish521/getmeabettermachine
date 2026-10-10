@@ -7,6 +7,7 @@ import { isDodoConfigured } from "@/lib/dodo";
 import { listMachineTiers } from "@/lib/tiers";
 import { listPublicSpots, listSpotRows } from "@/lib/spots";
 import { FOUNDER_SPONSOR } from "@/config/site";
+import { ALL_SPOTS_ID } from "@/config/spots";
 import type {
   ActivityItem,
   ActivityRow,
@@ -60,7 +61,12 @@ export async function listVisibleSponsors(): Promise<PublicSponsor[]> {
 
   return rows.map((row) => ({
     ...toPublicSponsor(row),
-    spotName: row.spot_id ? names.get(row.spot_id) ?? null : null,
+    spotName:
+      row.spot_id === ALL_SPOTS_ID
+        ? "All spots"
+        : row.spot_id
+          ? names.get(row.spot_id) ?? null
+          : null,
   }));
 }
 

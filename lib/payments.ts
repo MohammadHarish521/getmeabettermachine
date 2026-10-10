@@ -20,12 +20,18 @@ import {
 } from "@/lib/urls";
 import { cachedListingMeta, fetchListingMeta } from "@/lib/listing-meta";
 import { reportDodoPaymentToDataFast } from "@/lib/datafast-revenue";
+import { ALL_SPOTS_ID } from "@/config/spots";
 import {
+  SPOT_BUSY_MESSAGE,
   clearSpotOccupant,
   clearSpotPending,
   getSpot,
   holdSpot,
+  holdSpots,
+  isSpotHeld,
+  listSpotRows,
   nextSpotPrice,
+  occupyHeldSpots,
   occupySpot,
 } from "@/lib/spots";
 import type { PaymentRow, SponsorRow } from "@/lib/types";
@@ -52,7 +58,7 @@ async function getSponsor(id: string) {
   return db.prepare("SELECT * FROM sponsors WHERE id = ?").get<SponsorRow>(id);
 }
 
-async function parseAmount(raw: unknown, floor: number) {
+async function parseAmount(raw: unknown, floor: number, priceLabel = "That spot is") {
   const settings = await getSiteSettings();
   const value =
     raw === undefined || raw === null || raw === ""
@@ -66,7 +72,7 @@ async function parseAmount(raw: unknown, floor: number) {
     throw new HttpError(400, "Amount must be a whole dollar amount.");
   }
   if (value < floor) {
-    throw new HttpError(400, `That spot is $${floor}.`);
+    throw new HttpError(400, `${priceLabel} $${floor}.`);
   }
   if (value > settings.maxSponsorAmount) {
     throw new HttpError(
@@ -81,15 +87,45 @@ function clip(value: string, max: number) {
   return value.trim().slice(0, max);
 }
 
+type SpotOrder = {
+  label: string;
+  priceLabel: string;
+  price: number;
+  parts: { id: string; price: number }[] | null;
+};
+
+async function spotOrder(spotId: string): Promise<SpotOrder> {
+  if (spotId === ALL_SPOTS_ID) {
+    const rows = await listSpotRows();
+    if (rows.length === 0) throw new HttpError(404, "There are no spots to take.");
+    if (rows.some((row) => isSpotHeld(row))) throw new HttpError(409, SPOT_BUSY_MESSAGE);
+    const parts = rows.map((row) => ({ id: row.id, price: nextSpotPrice(row) }));
+    return {
+      label: "All spots",
+      priceLabel: "All spots are",
+      price: parts.reduce((sum, part) => sum + part.price, 0),
+      parts,
+    };
+  }
+
+  const spot = await getSpot(spotId);
+  if (!spot) throw new HttpError(404, "That spot does not exist.");
+  return {
+    label: spot.name,
+    priceLabel: "That spot is",
+    price: nextSpotPrice(spot),
+    parts: null,
+  };
+}
+
 export async function createSponsorshipCheckout(
   input: CheckoutInput & { datafastVisitorId?: string | null },
 ) {
   const spotId = typeof input.spotId === "string" ? input.spotId.trim() : "";
   if (!spotId) throw new HttpError(400, "Pick a spot on the machine first.");
-  const spot = await getSpot(spotId);
-  if (!spot) throw new HttpError(404, "That spot does not exist.");
+  const order = await spotOrder(spotId);
 
-  const amount = await parseAmount(input.amount, nextSpotPrice(spot));
+  const amount = await parseAmount(input.amount, order.price, order.priceLabel);
   const website = normalizeSponsorUrl(String(input.website ?? ""));
   const meta = cachedListingMeta(website) ?? {
     title: null,
@@ -113,7 +149,8 @@ export async function createSponsorshipCheckout(
 
   const db = await getDb();
   await db.transaction(async () => {
-    await holdSpot(spotId, paymentId, amount);
+    if (order.parts) await holdSpots(paymentId, order.parts);
+    else await holdSpot(spotId, paymentId, amount);
     const database = await getDb();
     await database
       .prepare(
@@ -152,7 +189,7 @@ export async function createSponsorshipCheckout(
     paymentId,
     sponsorId,
     amount,
-    sponsorName: `${shownName} · ${spot.name}`,
+    sponsorName: `${shownName} · ${order.label}`,
     provider,
     datafastVisitorId: input.datafastVisitorId,
   });
@@ -369,8 +406,13 @@ export async function confirmPayment(
     const updatedSponsor = (await getSponsor(sponsor.id))!;
     const updatedPayment = (await getPayment(payment.id))!;
     const name = displayNameFor(updatedSponsor);
-    const spot = updatedSponsor.spot_id ? await getSpot(updatedSponsor.spot_id) : null;
-    if (updatedSponsor.spot_id) {
+    const takesAll = updatedSponsor.spot_id === ALL_SPOTS_ID;
+    const spot =
+      updatedSponsor.spot_id && !takesAll ? await getSpot(updatedSponsor.spot_id) : null;
+    let spotCount = 0;
+    if (takesAll) {
+      spotCount = await occupyHeldSpots(payment.id, sponsor.id);
+    } else if (updatedSponsor.spot_id) {
       await occupySpot(updatedSponsor.spot_id, sponsor.id, sponsor.amount);
     }
 
@@ -378,9 +420,11 @@ export async function confirmPayment(
       type: "sponsor",
       sponsorId: sponsor.id,
       amount: sponsor.amount,
-      label: spot
-        ? `${name} took ${spot.name} for ${formatUsd(sponsor.amount)}`
-        : `${name} sponsored ${formatUsd(sponsor.amount)}`,
+      label: takesAll
+        ? `${name} took all ${spotCount} spots for ${formatUsd(sponsor.amount)}`
+        : spot
+          ? `${name} took ${spot.name} for ${formatUsd(sponsor.amount)}`
+          : `${name} sponsored ${formatUsd(sponsor.amount)}`,
     });
 
     await recordUnlocks(previousRaised, previousRaised + sponsor.amount);
