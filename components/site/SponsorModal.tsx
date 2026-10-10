@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ensureDataFast } from "@/lib/datafast";
 import { formatUsd } from "@/lib/format";
+import { SURFACE_LABEL } from "@/config/spots";
 import { SiteLogo } from "@/components/site/SiteLogo";
 import type { PublicSpot } from "@/lib/types";
 
@@ -134,6 +135,9 @@ export function SponsorModal({
                   <span>
                     <span className="mr-2 text-mute tabular-nums">{item.number}</span>
                     {item.name}
+                    <span className="mt-0.5 block text-[12px] text-dim">
+                      {SURFACE_LABEL[item.surface]}
+                    </span>
                   </span>
                   <span className="text-[13px] tabular-nums text-mute">
                     {formatUsd(item.nextPrice)}

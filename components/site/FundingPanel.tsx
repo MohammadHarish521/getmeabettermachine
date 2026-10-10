@@ -41,8 +41,17 @@ export function FundingPanel({
               {copy.milestoneLabel}
             </span>
           </p>
+          {overallPercent >= 100 ? (
+            <p className="mt-2 goal-status justify-center">
+              goal passed · {Math.round(overallPercent)}%
+            </p>
+          ) : (
+            <p className="mt-2 text-[13px] font-medium text-blue">
+              {Math.round(overallPercent)}% of goal
+            </p>
+          )}
           {founder ? (
-            <p className="mt-3 text-sm text-mute">
+            <p className="mt-2 text-sm text-mute">
               Including {formatUsd(founder.amount)} I put in to start.
             </p>
           ) : null}

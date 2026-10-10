@@ -13,17 +13,17 @@ export function Nav({ navOccupant }: { navOccupant?: PublicSponsor | null }) {
         <Wordmark occupant={navOccupant} />
         <nav className="flex items-center gap-5 text-[14px] text-mute">
           <a
-            className="transition-colors hover:text-ink"
+            className="link-external transition-colors hover:text-ink"
             href="https://datafa.st/share/6ac91124290e46fc33aa8a35"
             target="_blank"
             rel="noreferrer"
           >
             Live stats
           </a>
-          <a className="hidden transition-colors hover:text-ink sm:inline" href="#spots">
+          <a className="hidden link-internal transition-colors hover:text-ink sm:inline" href="#spots">
             Spots
           </a>
-          <a className="hidden transition-colors hover:text-ink sm:inline" href="#how">
+          <a className="hidden link-internal transition-colors hover:text-ink sm:inline" href="#how">
             How it works
           </a>
           <button type="button" className="btn-ink" onClick={() => openSponsor()}>

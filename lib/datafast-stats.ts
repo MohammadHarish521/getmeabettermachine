@@ -86,6 +86,7 @@ async function datafastGet(path: string, query: Record<string, string> = {}) {
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
     next: { revalidate: 60 },
+    signal: AbortSignal.timeout(8000),
   });
   const body = (await response.json().catch(() => ({}))) as Envelope;
   if (!response.ok) {
@@ -98,6 +99,7 @@ async function websiteIdForToken(key: string) {
   if (websiteId) return websiteId;
   const response = await fetch(`${API}/admin/websites`, {
     headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(8000),
   });
   const body = (await response.json().catch(() => ({}))) as Envelope;
   if (!response.ok) {

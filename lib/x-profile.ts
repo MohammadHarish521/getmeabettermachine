@@ -32,6 +32,7 @@ export async function getXProfile(): Promise<XProfile> {
     const response = await fetch(`https://api.fxtwitter.com/${HANDLE}`, {
       headers: { accept: "application/json" },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) return cached?.profile ?? fallback();
     const body = (await response.json()) as {

@@ -26,15 +26,17 @@ export function UpgradeLadder({ funding }: { funding: FundingState }) {
                       : "border-line"
                 } ${index === 0 ? "lg:border-l-0 lg:pl-0" : ""}`}
               >
+                <div className="inline-flex">
+                  {unlocked ? (
+                    <span className="badge badge-winner">Unlocked</span>
+                  ) : isNext ? (
+                    <span className="badge badge-status">Next</span>
+                  ) : (
+                    <span className="badge badge-category">Later</span>
+                  )}
+                </div>
                 <p
-                  className={`text-[11px] tracking-[0.08em] uppercase ${
-                    unlocked ? "text-blue" : isNext ? "text-ink" : "text-dim"
-                  }`}
-                >
-                  {unlocked ? "Unlocked" : isNext ? "Next" : "Later"}
-                </p>
-                <p
-                  className={`mt-3 text-xl font-semibold ${
+                  className={`mt-4 text-xl font-semibold ${
                     unlocked ? "text-ink" : isNext ? "text-ink" : "text-dim"
                   }`}
                 >

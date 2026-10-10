@@ -246,7 +246,8 @@ async function migrate(db: SqlDb) {
       occupant_sponsor_id TEXT,
       current_amount INTEGER NOT NULL DEFAULT 0,
       pending_payment_id TEXT,
-      pending_at TEXT
+      pending_at TEXT,
+      click_count INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE INDEX IF NOT EXISTS idx_activity_created
@@ -262,9 +263,11 @@ async function migrate(db: SqlDb) {
   `);
 
   await seedTiersIfEmpty(db);
+  await syncTierPrices(db);
   await upsertDefaultSpots(db);
   await seedSettingsIfEmpty(db);
   await addColumn(db, "sponsors", "spot_id", "TEXT");
+  await addColumn(db, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
   await seedFounderSponsor(db);
 }
 
@@ -275,6 +278,30 @@ export async function seedTiersIfEmpty(db?: SqlDb) {
     .get<{ count: number }>();
   if (row && row.count > 0) return;
   await insertDefaultTiers(database);
+}
+
+export async function syncTierPrices(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const update = database.prepare(
+    `UPDATE machine_tiers
+     SET sort_order = ?, amount_required = ?, machine_name = ?, chip = ?,
+         memory = ?, storage = ?, description = ?, short_label = ?, image = ?
+     WHERE id = ?`,
+  );
+  for (const tier of MACHINE_TIERS) {
+    await update.run(
+      tier.sortOrder,
+      tier.amountRequired,
+      tier.machineName,
+      tier.chip,
+      tier.memory,
+      tier.storage,
+      tier.description,
+      tier.shortLabel,
+      tier.image ?? null,
+      tier.id,
+    );
+  }
 }
 
 export async function insertDefaultTiers(db?: SqlDb) {
@@ -348,6 +375,54 @@ export async function upsertDefaultSpots(db?: SqlDb) {
         spot.y,
       );
     }
+  });
+}
+
+/** Insert any config seats that are missing. Leaves prices and occupants alone. */
+export async function ensureDefaultSpots(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  await addColumn(database, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
+  const insert = database.prepare(
+    `INSERT INTO spots (
+       id, sort_order, number, name, description, base_price, size, surface, x, y,
+       occupant_sponsor_id, current_amount, pending_payment_id, pending_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, NULL, NULL)
+     ON CONFLICT(id) DO NOTHING`,
+  );
+
+  await database.transaction(async () => {
+    for (const spot of SPOTS) {
+      await insert.run(
+        spot.id,
+        spot.number,
+        spot.number,
+        spot.name,
+        spot.description,
+        spot.price,
+        spot.size,
+        spot.surface,
+        spot.x,
+        spot.y,
+      );
+    }
+    await database
+      .prepare(
+        `DELETE FROM spots
+         WHERE surface IN ('keyboard', 'trackpad')
+           AND occupant_sponsor_id IS NULL`,
+      )
+      .run();
+    await database
+      .prepare(
+        `DELETE FROM spots
+         WHERE id IN (
+           'front-port-left', 'front-port-right',
+           'back-port-left', 'back-port-right',
+           'back-center'
+         )
+           AND occupant_sponsor_id IS NULL`,
+      )
+      .run();
   });
 }
 

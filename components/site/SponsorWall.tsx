@@ -40,43 +40,44 @@ export function SponsorWall({
         The people upgrading this Mac
       </h2>
 
-      <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px] text-mute tabular-nums">
-        <span>
-          <strong className="font-medium text-ink">{formatUsd(stats.raised)}</strong> raised
+      <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[13px]">
+        <span className="stat-chip">
+          <strong>{formatUsd(stats.raised)}</strong> raised
         </span>
-        <span>
-          <strong className="font-medium text-ink">{stats.count}</strong>{" "}
+        <span className="stat-chip">
+          <strong>{stats.count}</strong>{" "}
           {stats.count === 1 ? "sponsor" : "sponsors"}
         </span>
-        <span>
-          <strong className="font-medium text-ink">
+        <span className="stat-chip">
+          <strong>
             {stats.largestAmount ? formatUsd(stats.largestAmount) : "—"}
           </strong>{" "}
           largest sponsor
         </span>
       </div>
 
-      <div className="mt-8 flex justify-center gap-1 border-b border-line text-[13px]">
-        {(
-          [
-            ["latest", "Latest"],
-            ["top", "Top sponsors"],
-            ["all", "All"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setFilter(id)}
-            className={`-mb-px border-b px-3 py-2 ${
-              filter === id
-                ? "border-ink text-ink"
-                : "border-transparent text-mute hover:text-ink"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mt-8 flex justify-center">
+        <div className="segmented" role="tablist" aria-label="Sponsor list">
+          {(
+            [
+              ["latest", "Latest"],
+              ["top", "Top sponsors"],
+              ["all", "All"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className="segmented-btn"
+              data-active={filter === id ? "true" : "false"}
+              aria-selected={filter === id}
+              onClick={() => setFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {visible.length === 0 ? (
@@ -126,7 +127,7 @@ function SponsorCard({ sponsor }: { sponsor: PublicSponsor }) {
               {sponsor.displayName}
             </p>
             {sponsor.isFounder ? (
-              <span className="rounded-full bg-blue-soft px-2 py-0.5 text-[11px] font-medium text-blue">
+              <span className="badge badge-status tabular-nums">
                 Founder · {formatUsd(sponsor.amount)}
               </span>
             ) : null}
@@ -146,12 +147,12 @@ function SponsorCard({ sponsor }: { sponsor: PublicSponsor }) {
     </>
   );
 
-  const className = `block rounded-2xl border p-4 transition ${
+  const className = `block rounded-2xl border p-4 transition-all duration-200 ${
     sponsor.isFounder
       ? "border-blue/25 bg-blue-soft"
       : prominent
-        ? "border-line-strong bg-elevated/80"
-        : "border-line bg-transparent hover:border-line-strong"
+        ? "border-line-strong bg-elevated/80 hover:border-line-strong/80 hover:shadow-sm"
+        : "border-line bg-transparent hover:border-line-strong hover:shadow-sm"
   }`;
 
   if (sponsor.website) {

@@ -1,7 +1,6 @@
 import { SponsorProvider } from "@/components/site/SponsorProvider";
 import { Nav } from "@/components/site/Nav";
 import { Hero } from "@/components/site/Hero";
-import { SpotBoard } from "@/components/site/SpotBoard";
 import { SponsorWall } from "@/components/site/SponsorWall";
 import { UpgradeLadder } from "@/components/site/UpgradeLadder";
 import { HowItWorks } from "@/components/site/HowItWorks";
@@ -38,6 +37,7 @@ export default async function Page() {
           stats={stats}
         />
         <SocialProof
+          profile={profile}
           settings={{
             ...data.settings,
             socialProof: {
@@ -46,8 +46,6 @@ export default async function Page() {
             },
           }}
         />
-        <div className="hairline mx-auto max-w-[1120px]" />
-        <SpotBoard spots={data.spots} />
         <div className="hairline mx-auto max-w-[1120px]" />
         <SponsorWall sponsors={data.sponsors} stats={data.stats} />
         <div className="hairline mx-auto max-w-[1120px]" />

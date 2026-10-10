@@ -1,3 +1,5 @@
+import type { SpotSurface } from "@/config/spots";
+
 export type SponsorStatus =
   | "pending"
   | "paid"
@@ -86,16 +88,18 @@ export type PublicSpot = {
   name: string;
   description: string;
   size: "S" | "M" | "L";
-  surface: "stage" | "nav" | "footer";
+  surface: SpotSurface;
   gridCol: number;
   gridRow: number;
-  gridSpan: 1 | 2;
+  gridSpan: 1 | 2 | 3;
+  gridRowSpan: 1 | 2;
   x: number;
   y: number;
   basePrice: number;
   currentAmount: number;
   nextPrice: number;
   held: boolean;
+  clicks: number;
   occupant: PublicSponsor | null;
 };
 

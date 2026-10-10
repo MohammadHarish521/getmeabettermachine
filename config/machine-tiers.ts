@@ -1,22 +1,23 @@
 /**
  * Central machine ladder.
  *
- * `amountRequired` is the Apple India retail price for that
- * configuration, converted to USD. These are not US store prices.
+ * `amountRequired` is the India price for that configuration,
+ * converted to USD. These are not US store prices.
  *
- * Rate: ₹96.31 per $1 (2 Oct 2026 close), rounded to the nearest dollar.
- *   M6 16GB / 256GB      ₹99,900   → $1,037
- *   M6 24GB / 512GB      ₹1,47,900 → $1,536
- *   M6 32GB / 1TB        ₹2,07,900 → $2,159
- *   M5 Pro 24GB / 512GB  ₹2,09,900 → $2,179
- *   M5 Pro 64GB / 1TB    ₹3,89,900 → $4,048
+ * Rate: ₹96.73 per $1 (10 Oct 2026 close), nearest dollar.
+ * Flipkart Big Billion Days where a listing exists:
+ *   M6 16GB / 256GB      ₹93,990   → $972   Flipkart BBD (was ₹99,900)
+ *   M6 16GB / 512GB      ₹1,16,990          Flipkart BBD (not on this ladder)
+ *   M6 24GB / 512GB      ₹1,47,900 → $1,529 Apple India (no Flipkart listing)
+ *   M6 32GB / 1TB        ₹2,07,900 → $2,149 Apple India (configure-to-order)
+ *   M5 Pro 24GB / 512GB  ₹1,96,990 → $2,036 Flipkart BBD (was ₹2,09,900)
+ *   M5 Pro 64GB / 1TB    ₹3,89,900 → $4,031 Apple India (configure-to-order)
  *
  * Do not copy these amounts into UI components.
  * Read them through `resolveFunding()` / the database seed.
  *
- * After changing this file on a running site, open Admin and
- * use “Reload defaults from config” — or empty the machine_tiers
- * table so it reseeds on the next boot.
+ * After changing this file on a running site, prices sync on boot.
+ * Admin “Reload defaults from config” also rewrites the table.
  */
 export type MachineTierConfig = {
   id: string;
@@ -29,13 +30,17 @@ export type MachineTierConfig = {
   description: string;
   shortLabel: string;
   image?: string | null;
+  inrPrice: number;
+  priceSource: string;
 };
 
 export const MACHINE_TIERS: MachineTierConfig[] = [
   {
     id: "mini-m6-16-256",
     sortOrder: 1,
-    amountRequired: 1037,
+    amountRequired: 972,
+    inrPrice: 93_990,
+    priceSource: "Flipkart BBD",
     machineName: "Mac mini",
     chip: "M6",
     memory: "16GB",
@@ -48,7 +53,9 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
   {
     id: "mini-m6-24-512",
     sortOrder: 2,
-    amountRequired: 1536,
+    amountRequired: 1529,
+    inrPrice: 147_900,
+    priceSource: "Apple India",
     machineName: "Mac mini",
     chip: "M6",
     memory: "24GB",
@@ -61,7 +68,9 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
   {
     id: "mini-m6-32-1tb",
     sortOrder: 3,
-    amountRequired: 2159,
+    amountRequired: 2149,
+    inrPrice: 207_900,
+    priceSource: "Apple India",
     machineName: "Mac mini",
     chip: "M6",
     memory: "32GB",
@@ -74,7 +83,9 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
   {
     id: "mini-pro-24-512",
     sortOrder: 4,
-    amountRequired: 2179,
+    amountRequired: 2036,
+    inrPrice: 196_990,
+    priceSource: "Flipkart BBD",
     machineName: "Mac mini",
     chip: "M5 Pro",
     memory: "24GB",
@@ -87,7 +98,9 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
   {
     id: "mini-pro-64-1tb",
     sortOrder: 5,
-    amountRequired: 4048,
+    amountRequired: 4031,
+    inrPrice: 389_900,
+    priceSource: "Apple India",
     machineName: "Mac mini",
     chip: "M5 Pro",
     memory: "64GB",

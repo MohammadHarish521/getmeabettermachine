@@ -1,3 +1,7 @@
+export function formatClicks(count: number) {
+  return `${count} click${count === 1 ? "" : "s"}`;
+}
+
 export function formatUsd(amount: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

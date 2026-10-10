@@ -104,7 +104,7 @@ export function PaymentPoll({ paymentId }: { paymentId: string | null }) {
         </>
       ) : null}
 
-      <a href="/" className="btn-secondary mt-8 inline-flex">
+      <a href="/" className="btn-secondary mt-8 inline-flex link-internal">
         Back to Raise My Mac
       </a>
     </div>

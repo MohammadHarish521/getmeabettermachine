@@ -17,7 +17,7 @@ export function Footer({
       <div className="mx-auto flex max-w-[1120px] flex-col items-center gap-6 px-5 py-10 text-center sm:px-6">
         <div>
           <a
-            className="inline-flex items-center gap-3"
+            className="inline-flex items-center gap-3 link-external"
             href={profile.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -50,7 +50,7 @@ export function Footer({
             <p className="mt-3 text-[12px] text-dim">Payments by Dodo</p>
           )}
         </div>
-        <button type="button" className="btn-secondary" onClick={() => openSponsor()}>
+        <button type="button" className="btn-primary" onClick={() => openSponsor()}>
           Pick a spot
         </button>
       </div>
