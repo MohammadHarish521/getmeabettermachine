@@ -874,7 +874,7 @@ body {
     inset 0 0 0 1px rgba(0, 0, 0, 0.14);
 }
 
-.mac-side-face .spot-sticker[data-size="S"] {
+.mac-side-face .spot-sticker.spot-size-s {
   width: 100%;
   height: auto;
   min-height: 44px;
@@ -946,16 +946,16 @@ body {
   object-fit: contain;
 }
 
-.spot-sticker[data-size="S"] {
+.spot-sticker.spot-size-s {
   border-radius: 8px;
 }
 
-.spot-sticker[data-size="S"] .spot-sticker-logo {
+.spot-sticker.spot-size-s .spot-sticker-logo {
   max-height: 70%;
   max-width: 82%;
 }
 
-.mac-face .spot-sticker[data-size="S"] {
+.mac-face .spot-sticker.spot-size-s {
   align-self: center;
   justify-self: stretch;
   height: auto;

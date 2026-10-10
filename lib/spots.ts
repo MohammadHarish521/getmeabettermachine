@@ -86,7 +86,7 @@ export async function listPublicSpots(): Promise<PublicSpot[]> {
       number: row.number,
       name: row.name,
       description: row.description,
-      size: row.size,
+      size: row.size || config?.size || "M",
       surface: row.surface,
       gridCol: config?.gridCol ?? 1,
       gridRow: config?.gridRow ?? 1,

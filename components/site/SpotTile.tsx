@@ -46,7 +46,7 @@ export function SpotTile({
     return (
       <button
         type="button"
-        className={className}
+        className={`${className} spot-size-${spot.size.toLowerCase()}`}
         data-taken="false"
         data-held={spot.held ? "true" : "false"}
         data-size={spot.size}
@@ -65,7 +65,7 @@ export function SpotTile({
 
   return (
     <div
-      className={className}
+      className={`${className} spot-size-${spot.size.toLowerCase()}`}
       data-taken="true"
       data-held={spot.held ? "true" : "false"}
       data-size={spot.size}
