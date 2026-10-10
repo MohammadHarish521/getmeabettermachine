@@ -318,6 +318,64 @@ body {
   transform: scale(0.98);
 }
 
+.sale-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+.sale-timer-label {
+  display: none;
+}
+
+.sale-timer-clock {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.sale-timer-part {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.sale-timer-part b {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.sale-timer-part small {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--dim);
+}
+
+.sale-timer-ended {
+  font-weight: 500;
+  color: var(--dim);
+}
+
+@media (min-width: 640px) {
+  .sale-timer-label {
+    display: inline;
+  }
+}
+
+@media (max-width: 399px) {
+  .sale-timer-seconds {
+    display: none;
+  }
+}
+
 .btn-primary:hover {
   background: var(--blue-hover);
 }

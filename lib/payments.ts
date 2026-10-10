@@ -9,6 +9,7 @@ import { listMachineTiers } from "@/lib/tiers";
 import {
   createDodoCheckout,
   dodoErrorCode,
+  getDodoClient,
   isDodoConfigured,
 } from "@/lib/dodo";
 import {
@@ -103,7 +104,7 @@ export async function createSponsorshipCheckout(
   const createdAt = nowIso();
   const provider = isDodoConfigured() ? "dodo" : "mock";
   const shownName = isAnonymous ? "Anonymous" : name;
-  const storedLogo = logoUrl || letterLogo(shownName);
+  const storedLogo = logoUrl || meta.image || letterLogo(shownName);
 
   const db = await getDb();
   await db.transaction(async () => {
@@ -442,7 +443,37 @@ export async function getSponsorById(id: string) {
   return getSponsor(id);
 }
 
+export async function syncPendingDodoPayment(id: string) {
+  const payment = await getPayment(id);
+  if (!payment || payment.status !== "pending" || payment.provider !== "dodo") {
+    return payment;
+  }
+  if (!payment.dodo_session_id) return payment;
+  const client = getDodoClient();
+  if (!client) return payment;
+
+  try {
+    const session = await client.checkoutSessions.retrieve(payment.dodo_session_id);
+    if (session.payment_status === "succeeded") {
+      await confirmPayment(payment.id, {
+        dodoPaymentId: session.payment_id ?? null,
+        dodoSessionId: session.id,
+      });
+    } else if (
+      session.payment_status === "failed" ||
+      session.payment_status === "cancelled"
+    ) {
+      await failPayment(payment.id);
+    }
+  } catch (error) {
+    console.error("Dodo session sync failed", error);
+  }
+
+  return getPayment(id);
+}
+
 export async function getPaymentPublicStatus(id: string) {
+  await syncPendingDodoPayment(id);
   const payment = await getPayment(id);
   if (!payment) throw new HttpError(404, "Payment not found.");
   const sponsor = await getSponsor(payment.sponsor_id);

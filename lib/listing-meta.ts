@@ -7,10 +7,11 @@ const DESCRIPTION_MAX = 220;
 export type ListingMeta = {
   title: string | null;
   description: string | null;
+  image: string | null;
 };
 
 export async function fetchListingMeta(url: string): Promise<ListingMeta> {
-  const empty: ListingMeta = { title: null, description: null };
+  const empty: ListingMeta = { title: null, description: null, image: null };
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -42,7 +43,11 @@ export async function fetchListingMeta(url: string): Promise<ListingMeta> {
       meta(html, ["og:description", "twitter:description", "description"]),
       DESCRIPTION_MAX,
     );
-    return { title, description };
+    const image = resolveMetaUrl(
+      parsed,
+      meta(html, ["og:image", "twitter:image", "twitter:image:src"]),
+    );
+    return { title, description, image };
   } catch {
     return empty;
   } finally {
@@ -69,6 +74,20 @@ function meta(html: string, keys: string[]) {
     }
   }
   return null;
+}
+
+function resolveMetaUrl(page: URL, raw: string | null) {
+  if (!raw) return null;
+  try {
+    const resolved = new URL(raw, page);
+    if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
+      return null;
+    }
+    if (isPrivateHost(resolved.hostname)) return null;
+    return resolved.toString();
+  } catch {
+    return null;
+  }
 }
 
 function pageTitle(html: string) {

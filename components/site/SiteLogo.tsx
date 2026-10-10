@@ -16,11 +16,8 @@ export function SiteLogo({
   className?: string;
 }) {
   const fallback = src?.startsWith("data:") ? src : letterLogo(name);
-  const icon = siteUrl
-    ? siteIconPath(siteUrl)
-    : src && !src.startsWith("data:")
-      ? src
-      : "";
+  const uploaded = src && !src.startsWith("data:") ? src : "";
+  const icon = uploaded || (siteUrl ? siteIconPath(siteUrl) : "");
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

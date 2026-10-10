@@ -77,7 +77,9 @@ export function PaymentPoll({ paymentId }: { paymentId: string | null }) {
       {status?.payment.status === "pending" ? (
         <>
           <p className="text-[22px] font-medium tracking-[-0.03em]">Confirming payment…</p>
-          <p className="mt-2 text-[14px] text-mute">Still waiting on the webhook.</p>
+          <p className="mt-2 text-[14px] text-mute">
+            Checking Dodo for the charge. This can take a few seconds.
+          </p>
         </>
       ) : null}
 
