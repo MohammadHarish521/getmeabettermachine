@@ -38,44 +38,44 @@ export function SpotStage({ spots }: { spots: PublicSpot[] }) {
   return (
     <div id="spots">
       <div className="mb-4 flex flex-col items-center">
-        <div className="segmented" role="tablist" aria-label="Spot view">
-          <button
-            type="button"
-            role="tab"
-            className="segmented-btn"
-            data-active={view === "machine" ? "true" : "false"}
-            aria-selected={view === "machine"}
-            onClick={() => setView("machine")}
-          >
-            The machine
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className="segmented-btn"
-            data-active={view === "inventory" ? "true" : "false"}
-            aria-selected={view === "inventory"}
-            onClick={() => setView("inventory")}
-          >
-            The inventory
-          </button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="segmented" role="tablist" aria-label="Spot view">
+            <button
+              type="button"
+              role="tab"
+              className="segmented-btn"
+              data-active={view === "machine" ? "true" : "false"}
+              aria-selected={view === "machine"}
+              onClick={() => setView("machine")}
+            >
+              The machine
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className="segmented-btn"
+              data-active={view === "inventory" ? "true" : "false"}
+              aria-selected={view === "inventory"}
+              onClick={() => setView("inventory")}
+            >
+              The inventory
+            </button>
+          </div>
+          {spots.length > 1 ? (
+            <button
+              type="button"
+              className="take-all-btn"
+              onClick={() => openSponsor(ALL_SPOTS_ID)}
+            >
+              Take all {spots.length} spots
+              <span className="take-all-price">{formatUsd(allTotal)}</span>
+            </button>
+          ) : null}
         </div>
         <p className="segmented-caption">
           {view === "inventory"
             ? "Every spot, who holds it, and what it costs to take over."
             : "Tap any sticker to take that spot. Taken seats can be claimed for 1.5×."}
-          {spots.length > 1 ? (
-            <>
-              {" "}
-              <button
-                type="button"
-                className="text-link cursor-pointer"
-                onClick={() => openSponsor(ALL_SPOTS_ID)}
-              >
-                Take all {spots.length} for {formatUsd(allTotal)}
-              </button>
-            </>
-          ) : null}
         </p>
       </div>
 

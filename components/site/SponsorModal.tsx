@@ -138,16 +138,16 @@ export function SponsorModal({
               <li>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-line-strong bg-charcoal px-3 py-3 text-left hover:border-ink/40"
+                  className="flex w-full items-center justify-between rounded-xl border border-blue bg-blue-soft px-3 py-3 text-left transition-colors hover:bg-blue hover:text-white [&:hover_span]:text-white"
                   onClick={() => onPickSpot(ALL_SPOTS_ID)}
                 >
-                  <span>
-                    All {spots.length} spots
-                    <span className="mt-0.5 block text-[12px] text-dim">
+                  <span className="font-medium text-blue">
+                    Take all {spots.length} spots
+                    <span className="mt-0.5 block text-[12px] font-normal text-blue/80">
                       Every sticker in one checkout
                     </span>
                   </span>
-                  <span className="text-[13px] font-medium tabular-nums text-ink">
+                  <span className="text-[14px] font-semibold tabular-nums text-blue">
                     {formatUsd(allTotal)}
                   </span>
                 </button>
