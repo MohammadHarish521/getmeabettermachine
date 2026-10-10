@@ -1,15 +1,8 @@
 import { PaymentPoll } from "@/components/site/PaymentPoll";
 import { Wordmark } from "@/components/site/Wordmark";
+import { localPaymentId } from "@/lib/payment-ref";
 
 export const dynamic = "force-dynamic";
-
-function localPaymentId(value: string | string[] | undefined) {
-  const parts = (Array.isArray(value) ? value : value ? [value] : [])
-    .flatMap((part) => part.split(","))
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return parts.find((part) => !part.startsWith("pay_")) ?? null;
-}
 
 export default async function SuccessPage({
   searchParams,

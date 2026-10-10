@@ -239,6 +239,14 @@ export function SponsorModal({
 
             {error ? <p className="text-[13px] text-red-700">{error}</p> : null}
 
+            <p className="text-[12px] leading-5 text-dim">
+              By paying you agree to the{" "}
+              <a className="text-link" href="/terms" target="_blank" rel="noopener noreferrer">
+                terms
+              </a>
+              . No illegal activity and no adult content.
+            </p>
+
             <button
               type="submit"
               className="btn-primary w-full"

@@ -1,8 +1,18 @@
+import { ReleaseHold } from "@/components/site/ReleaseHold";
 import { Wordmark } from "@/components/site/Wordmark";
+import { localPaymentId } from "@/lib/payment-ref";
 
-export default function CancelPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CancelPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string | string[] }>;
+}) {
+  const params = await searchParams;
   return (
     <div className="min-h-dvh">
+      <ReleaseHold paymentId={localPaymentId(params.ref)} />
       <header className="border-b border-line">
         <div className="mx-auto flex h-14 max-w-[1120px] items-center px-5">
           <Wordmark />

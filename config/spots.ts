@@ -278,3 +278,6 @@ export const SPOT_HOLD_MS = 20 * 60 * 1000;
 
 /** Checkout id for buying every spot at once. Taken spots count at 1.5×. */
 export const ALL_SPOTS_ID = "all";
+
+/** Shorter than SPOT_HOLD_MS: an abandoned all-spots checkout freezes the whole board. */
+export const ALL_SPOTS_HOLD_MS = 10 * 60 * 1000;

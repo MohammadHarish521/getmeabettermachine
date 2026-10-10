@@ -145,7 +145,7 @@ export async function createSponsorshipCheckout(
   const createdAt = nowIso();
   const provider = isDodoConfigured() ? "dodo" : "mock";
   const shownName = isAnonymous ? "Anonymous" : name;
-  const storedLogo = logoUrl || meta.image || letterLogo(shownName);
+  const storedLogo = logoUrl || letterLogo(shownName);
 
   const db = await getDb();
   await db.transaction(async () => {
@@ -203,16 +203,7 @@ export async function enrichSponsorListing(sponsorId: string) {
   const host = hostnameFromUrl(sponsor.website);
   const name = clip(meta.title || sponsor.name || host, 80) || "Sponsor";
   const message = clip(meta.description ?? sponsor.message ?? "", 280);
-  const logoUrl =
-    meta.image && sponsor.logo_url.startsWith("data:")
-      ? meta.image
-      : sponsor.logo_url;
-
-  if (
-    name === sponsor.name &&
-    message === sponsor.message &&
-    logoUrl === sponsor.logo_url
-  ) {
+  if (name === sponsor.name && message === sponsor.message) {
     return;
   }
 
@@ -220,10 +211,10 @@ export async function enrichSponsorListing(sponsorId: string) {
   await db
     .prepare(
       `UPDATE sponsors
-       SET name = ?, company = ?, message = ?, logo_url = ?, updated_at = ?
+       SET name = ?, company = ?, message = ?, updated_at = ?
        WHERE id = ?`,
     )
-    .run(name, clip(host, 80), message, logoUrl, nowIso(), sponsor.id);
+    .run(name, clip(host, 80), message, nowIso(), sponsor.id);
 }
 
 async function finalizeCheckout(input: {
@@ -554,6 +545,14 @@ export async function syncPendingDodoPayment(id: string) {
   }
 
   return getPayment(id);
+}
+
+/** Buyer left checkout: free the spots, but keep the payment open in case they still pay. */
+export async function releaseCheckoutHold(id: string) {
+  const payment = await syncPendingDodoPayment(id);
+  if (!payment) throw new HttpError(404, "Payment not found.");
+  if (payment.status === "pending") await clearSpotPending(payment.id);
+  return payment.status;
 }
 
 export async function getPaymentPublicStatus(id: string) {

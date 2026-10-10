@@ -49,6 +49,11 @@ export function Footer({
           ) : (
             <p className="mt-3 text-[12px] text-dim">Payments by Dodo</p>
           )}
+          <p className="mt-3 text-[12px] text-dim">
+            <a className="link-internal hover:text-ink" href="/terms">
+              Terms
+            </a>
+          </p>
         </div>
         <button type="button" className="btn-primary" onClick={() => openSponsor()}>
           Pick a spot

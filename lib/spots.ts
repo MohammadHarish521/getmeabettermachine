@@ -1,4 +1,9 @@
-import { SPOTS, SPOT_HOLD_MS, type SpotSurface } from "@/config/spots";
+import {
+  ALL_SPOTS_HOLD_MS,
+  SPOTS,
+  SPOT_HOLD_MS,
+  type SpotSurface,
+} from "@/config/spots";
 import { FOUNDER_SPONSOR } from "@/config/site";
 import { getDb, nowIso } from "@/lib/db";
 import { letterLogo, displayNameFor } from "@/lib/format";
@@ -20,6 +25,8 @@ export type SpotRow = {
   current_amount: number;
   pending_payment_id: string | null;
   pending_at: string | null;
+  /** Set for all-spots holds. Single-spot holds expire SPOT_HOLD_MS after pending_at. */
+  pending_until: string | null;
   click_count: number;
 };
 
@@ -36,9 +43,13 @@ export async function listSpotRows() {
 }
 
 export function isSpotHeld(spot: SpotRow, now = Date.now()) {
-  if (!spot.pending_payment_id || !spot.pending_at) return false;
-  const held = new Date(spot.pending_at).getTime();
-  return Number.isFinite(held) && now - held < SPOT_HOLD_MS;
+  if (!spot.pending_payment_id) return false;
+  const until = spot.pending_until
+    ? new Date(spot.pending_until).getTime()
+    : spot.pending_at
+      ? new Date(spot.pending_at).getTime() + SPOT_HOLD_MS
+      : NaN;
+  return Number.isFinite(until) && now < until;
 }
 
 export function nextSpotPrice(spot: SpotRow) {
@@ -127,7 +138,7 @@ export async function holdSpot(spotId: string, paymentId: string, amount: number
   const db = await getDb();
   await db
     .prepare(
-      "UPDATE spots SET pending_payment_id = ?, pending_at = ? WHERE id = ?",
+      "UPDATE spots SET pending_payment_id = ?, pending_at = ?, pending_until = NULL WHERE id = ?",
     )
     .run(paymentId, nowIso(), spotId);
   return spot;
@@ -143,14 +154,21 @@ export async function holdSpots(
 ) {
   const db = await getDb();
   const ids = parts.map((part) => part.id);
-  const cutoff = new Date(Date.now() - SPOT_HOLD_MS).toISOString();
+  const now = Date.now();
+  const nowStamp = new Date(now).toISOString();
+  const cutoff = new Date(now - SPOT_HOLD_MS).toISOString();
+  const until = new Date(now + ALL_SPOTS_HOLD_MS).toISOString();
   const held = await db
     .prepare(
-      `UPDATE spots SET pending_payment_id = ?, pending_at = ?
+      `UPDATE spots SET pending_payment_id = ?, pending_at = ?, pending_until = ?
        WHERE id IN (${ids.map(() => "?").join(",")})
-         AND (pending_payment_id IS NULL OR pending_at IS NULL OR pending_at < ?)`,
+         AND (
+           pending_payment_id IS NULL
+           OR (pending_until IS NOT NULL AND pending_until <= ?)
+           OR (pending_until IS NULL AND (pending_at IS NULL OR pending_at <= ?))
+         )`,
     )
-    .run(paymentId, nowIso(), ...ids, cutoff);
+    .run(paymentId, nowStamp, until, ...ids, nowStamp, cutoff);
   if (held.changes !== ids.length) throw new HttpError(409, SPOT_BUSY_MESSAGE);
 
   await db
@@ -169,7 +187,7 @@ export async function occupyHeldSpots(paymentId: string, sponsorId: string) {
     .prepare(
       `UPDATE spots
        SET occupant_sponsor_id = ?, current_amount = ${paid},
-           pending_payment_id = NULL, pending_at = NULL,
+           pending_payment_id = NULL, pending_at = NULL, pending_until = NULL,
            click_count = 0
        WHERE id IN (SELECT spot_id FROM payment_spots WHERE payment_id = ?)
          AND (occupant_sponsor_id IS NULL OR current_amount <= ${paid})`,
@@ -192,7 +210,7 @@ export async function occupySpot(spotId: string, sponsorId: string, amount: numb
     .prepare(
       `UPDATE spots
        SET occupant_sponsor_id = ?, current_amount = ?,
-           pending_payment_id = NULL, pending_at = NULL,
+           pending_payment_id = NULL, pending_at = NULL, pending_until = NULL,
            click_count = 0
        WHERE id = ?`,
     )
@@ -204,7 +222,7 @@ export async function clearSpotPending(paymentId: string) {
   await db
     .prepare(
       `UPDATE spots
-       SET pending_payment_id = NULL, pending_at = NULL
+       SET pending_payment_id = NULL, pending_at = NULL, pending_until = NULL
        WHERE pending_payment_id = ?`,
     )
     .run(paymentId);

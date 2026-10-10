@@ -29,8 +29,12 @@ export type SqlDb = {
   transaction<T>(fn: () => Promise<T>): Promise<T>;
 };
 
+/** Bump when migrate() gains tables or columns so a long-lived `next dev` re-applies them. */
+const SCHEMA_VERSION = 2;
+
 const globalForDb = globalThis as unknown as {
   __raiseMyMacDb?: Promise<SqlDb>;
+  __raiseMyMacSchema?: number;
 };
 
 function argsOf(args: SqlValue[]): InArgs {
@@ -127,11 +131,16 @@ export function nowIso() {
   return new Date().toISOString();
 }
 
-export function getDb() {
+export async function getDb() {
   if (!globalForDb.__raiseMyMacDb) {
     globalForDb.__raiseMyMacDb = openDb();
   }
-  return globalForDb.__raiseMyMacDb;
+  const db = await globalForDb.__raiseMyMacDb;
+  if (globalForDb.__raiseMyMacSchema !== SCHEMA_VERSION) {
+    await migrate(db);
+    globalForDb.__raiseMyMacSchema = SCHEMA_VERSION;
+  }
+  return db;
 }
 
 async function openDb(): Promise<SqlDb> {
@@ -141,6 +150,7 @@ async function openDb(): Promise<SqlDb> {
     ? remoteDb(createClient({ url, authToken }))
     : localDb(await openLocalFile());
   await migrate(db);
+  globalForDb.__raiseMyMacSchema = SCHEMA_VERSION;
   return db;
 }
 
@@ -276,6 +286,7 @@ async function migrate(db: SqlDb) {
   await seedSettingsIfEmpty(db);
   await addColumn(db, "sponsors", "spot_id", "TEXT");
   await addColumn(db, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
+  await addColumn(db, "spots", "pending_until", "TEXT");
   await seedFounderSponsor(db);
 }
 
@@ -471,7 +482,14 @@ async function addColumn(
     name: string;
   }>();
   if (cols.some((col) => col.name === column)) return;
-  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  try {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (error) {
+    // Another server instance can add the same column between the check and the ALTER.
+    if (!/duplicate column/i.test(error instanceof Error ? error.message : String(error))) {
+      throw error;
+    }
+  }
 }
 
 async function seedSettingsIfEmpty(db: SqlDb) {

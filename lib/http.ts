@@ -13,5 +13,9 @@ export function jsonError(error: unknown) {
   }
 
   console.error(error);
-  return Response.json({ error: "Something went wrong." }, { status: 500 });
+  const detail =
+    process.env.NODE_ENV !== "production" && error instanceof Error
+      ? error.message
+      : "Something went wrong.";
+  return Response.json({ error: detail }, { status: 500 });
 }

@@ -70,7 +70,7 @@ export async function createDodoCheckout(input: {
     ],
     billing_currency: "USD",
     return_url: `${appUrl}/sponsor/success?ref=${input.paymentId}`,
-    cancel_url: `${appUrl}/sponsor/cancel`,
+    cancel_url: `${appUrl}/sponsor/cancel?ref=${input.paymentId}`,
     metadata: {
       paymentId: input.paymentId,
       sponsorId: input.sponsorId,
