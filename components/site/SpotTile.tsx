@@ -49,6 +49,7 @@ export function SpotTile({
         className={className}
         data-taken="false"
         data-held={spot.held ? "true" : "false"}
+        data-size={spot.size}
         style={style}
         onClick={() => openSponsor(spot.id)}
         aria-label={`${spot.name}, ${formatUsd(spot.nextPrice)}`}
@@ -67,6 +68,7 @@ export function SpotTile({
       className={className}
       data-taken="true"
       data-held={spot.held ? "true" : "false"}
+      data-size={spot.size}
       style={style}
     >
       <SiteLogo

@@ -858,12 +858,13 @@ body {
   z-index: 2;
   left: 6.5%;
   right: 6.5%;
-  top: 14%;
-  height: 54%;
+  top: 16%;
+  height: 58%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: 1fr 1fr;
-  gap: 10px 8px;
+  grid-template-rows: 1fr;
+  gap: 8px;
+  align-items: center;
 }
 
 .mac-side-face .spot-sticker {
@@ -871,6 +872,31 @@ body {
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.08),
     inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.mac-side-face .spot-sticker[data-size="S"] {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  aspect-ratio: 1.55 / 1;
+  max-height: 100%;
+  border-radius: 8px;
+}
+
+.mac-side-face .spot-sticker-logo {
+  max-height: 72%;
+  max-width: 84%;
+}
+
+.mac-side-face .spot-actions {
+  gap: 3px;
+  padding: 4px;
+}
+
+.mac-side-face .spot-action {
+  height: 18px;
+  min-height: 18px;
+  font-size: 9px;
 }
 
 .spot-sticker {
@@ -918,6 +944,24 @@ body {
   max-height: 58%;
   max-width: 76%;
   object-fit: contain;
+}
+
+.spot-sticker[data-size="S"] {
+  border-radius: 8px;
+}
+
+.spot-sticker[data-size="S"] .spot-sticker-logo {
+  max-height: 70%;
+  max-width: 82%;
+}
+
+.mac-face .spot-sticker[data-size="S"] {
+  align-self: center;
+  justify-self: stretch;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1.4 / 1;
+  max-height: 78%;
 }
 
 .spot-sticker-meta {

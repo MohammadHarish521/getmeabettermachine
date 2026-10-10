@@ -70,12 +70,17 @@ export function hostnameFromUrl(url: string) {
 export function normalizeSponsorUrl(raw: string) {
   let url = raw.trim();
   if (!url) throw new HttpError(400, "Paste the URL you want on that sticker.");
-  if (url.startsWith("@")) {
-    const handle = url.slice(1).replace(/[^a-zA-Z0-9_]/g, "");
-    if (!handle) throw new HttpError(400, "Enter a valid @handle.");
-    url = `https://x.com/${handle}`;
-  }
+  const handle = bareHandle(url);
+  if (handle) url = `https://x.com/${handle}`;
   return normalizeHttpUrl(url, "Website");
+}
+
+/** `@name` or `the_cozydev` — no scheme and no dot, so not a website. */
+function bareHandle(raw: string) {
+  const value = raw.startsWith("@") ? raw.slice(1) : raw;
+  if (!value || /[./:]/.test(value)) return "";
+  if (!/^[a-zA-Z0-9_]{1,30}$/.test(value)) return "";
+  return value;
 }
 
 export function siteIconPath(site: string) {
