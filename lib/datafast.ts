@@ -6,7 +6,7 @@ export function ensureDataFast() {
     const tick = () => {
       if (
         document.cookie.includes("datafast_visitor_id=") ||
-        Date.now() - started > 1500
+        Date.now() - started > 800
       ) {
         resolve();
         return;

@@ -52,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           src="https://datafa.st/js/script.js"
           data-website-id="dfid_B3o3P3Z0FETAZbOhZRj49"
           data-domain="www.raisemymini.com"
+          data-disable-payments="true"
           strategy="afterInteractive"
         />
         <div className="page-noise" aria-hidden="true" />

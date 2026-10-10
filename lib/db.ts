@@ -265,6 +265,7 @@ async function migrate(db: SqlDb) {
   await seedTiersIfEmpty(db);
   await seedSpotsIfEmpty(db);
   await ensureDefaultSpots(db);
+  await syncSpotPrices(db);
   await seedSettingsIfEmpty(db);
   await addColumn(db, "sponsors", "spot_id", "TEXT");
   await addColumn(db, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
@@ -376,6 +377,14 @@ export async function upsertDefaultSpots(db?: SqlDb) {
       );
     }
   });
+}
+
+export async function syncSpotPrices(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const update = database.prepare("UPDATE spots SET base_price = ? WHERE id = ?");
+  for (const spot of SPOTS) {
+    await update.run(spot.price, spot.id);
+  }
 }
 
 /** Insert any config seats that are missing. Leaves prices and occupants alone. */

@@ -19,6 +19,7 @@ import {
   normalizeXUrl,
 } from "@/lib/urls";
 import { cachedListingMeta, fetchListingMeta } from "@/lib/listing-meta";
+import { reportDodoPaymentToDataFast } from "@/lib/datafast-revenue";
 import {
   clearSpotOccupant,
   clearSpotPending,
@@ -490,10 +491,14 @@ export async function syncPendingDodoPayment(id: string) {
   try {
     const session = await client.checkoutSessions.retrieve(payment.dodo_session_id);
     if (session.payment_status === "succeeded") {
-      await confirmPayment(payment.id, {
+      const result = await confirmPayment(payment.id, {
         dodoPaymentId: session.payment_id ?? null,
         dodoSessionId: session.id,
       });
+      if (!result.alreadyProcessed && session.payment_id) {
+        const paid = await client.payments.retrieve(session.payment_id);
+        await reportDodoPaymentToDataFast(paid);
+      }
     } else if (
       session.payment_status === "failed" ||
       session.payment_status === "cancelled"
