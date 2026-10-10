@@ -57,7 +57,7 @@ export default async function Image() {
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 72, fontWeight: 500, letterSpacing: -3 }}>
-            {formatUsd(raised)} raised
+            {`${formatUsd(raised)} raised`}
           </div>
           <div style={{ marginTop: 12, fontSize: 28, color: "#6d6963" }}>{chip}</div>
           <div style={{ marginTop: 6, fontSize: 24, color: "#9a958c" }}>{specs}</div>
