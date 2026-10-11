@@ -13,6 +13,15 @@
  *   M5 Pro 24GB / 512GB  ₹1,96,990 → $2,036 Flipkart BBD (was ₹2,09,900)
  *   M5 Pro 64GB / 1TB    ₹3,89,900 → $4,031 Apple India (configure-to-order)
  *
+ * MacBook ladder, Apple India MRP, lowest current Air to the top Pro:
+ *   Air 13" M5 16GB / 512GB          ₹1,49,900 → $1,550
+ *   Air 15" M5 16GB / 512GB          ₹1,79,900 → $1,860
+ *   Pro 14" M5 16GB / 1TB            ₹2,39,900 → $2,480
+ *   Pro 16" M5 Pro 24GB / 1TB        ₹2,99,900 → $3,100  starts here
+ *   Pro 16" M5 Pro 48GB / 1TB        ₹4,31,900 → $4,465
+ *   Pro 16" M5 Max 128GB / 2TB       ₹8,79,900 → $9,096  nano-texture
+ *   Pro 16" M5 Max 128GB / 8TB       ₹12,37,900 → $12,797 nano-texture, top CTO
+ *
  * Do not copy these amounts into UI components.
  * Read them through `resolveFunding()` / the database seed.
  *
@@ -66,8 +75,37 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
     image: null,
   },
   {
-    id: "mini-m6-32-1tb",
+    id: "air-m5-13-16-512",
     sortOrder: 3,
+    amountRequired: 1550,
+    inrPrice: 149_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Air",
+    chip: "M5",
+    memory: "16GB",
+    storage: "512GB SSD",
+    shortLabel: "Air 13″",
+    description:
+      "The lowest current MacBook Air. 13-inch, M5, 16GB of memory and a 512GB SSD.",
+    image: null,
+  },
+  {
+    id: "air-m5-15-16-512",
+    sortOrder: 4,
+    amountRequired: 1860,
+    inrPrice: 179_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Air",
+    chip: "M5",
+    memory: "16GB",
+    storage: "512GB SSD",
+    shortLabel: "Air 15″",
+    description: "The 15-inch Air. Same M5 and 16GB, with the larger screen.",
+    image: null,
+  },
+  {
+    id: "mini-m6-32-1tb",
+    sortOrder: 6,
     amountRequired: 2149,
     inrPrice: 207_900,
     priceSource: "Apple India",
@@ -82,7 +120,7 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
   },
   {
     id: "mini-pro-24-512",
-    sortOrder: 4,
+    sortOrder: 5,
     amountRequired: 2036,
     inrPrice: 196_990,
     priceSource: "Flipkart BBD",
@@ -96,8 +134,22 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
     image: null,
   },
   {
+    id: "pro-m5-14-16-1tb",
+    sortOrder: 7,
+    amountRequired: 2480,
+    inrPrice: 239_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Pro",
+    chip: "M5",
+    memory: "16GB",
+    storage: "1TB SSD",
+    shortLabel: "Pro 14″",
+    description: "The entry 14-inch MacBook Pro. M5, 16GB, and a 1TB SSD.",
+    image: null,
+  },
+  {
     id: "mini-pro-64-1tb",
-    sortOrder: 5,
+    sortOrder: 9,
     amountRequired: 4031,
     inrPrice: 389_900,
     priceSource: "Apple India",
@@ -108,6 +160,64 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
     shortLabel: "Pro 64GB",
     description:
       "Future headroom. If sponsorship keeps going, the ladder does too.",
+    image: null,
+  },
+  {
+    id: "pro-m5pro-16-24-1tb",
+    sortOrder: 8,
+    amountRequired: 3100,
+    inrPrice: 299_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Pro",
+    chip: "M5 Pro",
+    memory: "24GB",
+    storage: "1TB SSD",
+    shortLabel: "Pro 16″",
+    description: "Where the 16-inch M5 Pro starts. 24GB of memory and a 1TB SSD.",
+    image: null,
+  },
+  {
+    id: "pro-m5pro-16-48-1tb",
+    sortOrder: 10,
+    amountRequired: 4465,
+    inrPrice: 431_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Pro",
+    chip: "M5 Pro",
+    memory: "48GB",
+    storage: "1TB SSD",
+    shortLabel: "Pro 48GB",
+    description: "The 16-inch M5 Pro stepped up to 48GB and a 1TB SSD.",
+    image: null,
+  },
+  {
+    id: "pro-m5max-16-128-2tb",
+    sortOrder: 11,
+    amountRequired: 9096,
+    inrPrice: 879_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Pro",
+    chip: "M5 Max",
+    memory: "128GB",
+    storage: "2TB SSD",
+    shortLabel: "Max 128GB",
+    description:
+      "16-inch M5 Max, 128GB, 2TB, with the nano-texture display.",
+    image: null,
+  },
+  {
+    id: "pro-m5max-16-128-8tb",
+    sortOrder: 12,
+    amountRequired: 12797,
+    inrPrice: 1_237_900,
+    priceSource: "Apple India",
+    machineName: "MacBook Pro",
+    chip: "M5 Max",
+    memory: "128GB",
+    storage: "8TB SSD",
+    shortLabel: "Max 8TB",
+    description:
+      "The top configure-to-order Pro. 16-inch M5 Max, 128GB, 8TB, nano-texture display.",
     image: null,
   },
 ];

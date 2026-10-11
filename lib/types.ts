@@ -130,6 +130,8 @@ export type FundingState = {
   current: MachineTier | null;
   next: MachineTier | null;
   remaining: number;
+  /** Dollars raised above the highest config. Keeps growing with no cap. */
+  surplus: number;
   percentToNext: number;
   overallPercent: number;
   unlocked: MachineTier[];

@@ -38,15 +38,18 @@ export function resolveFunding(
   const last = sorted.at(-1);
   const overallPercent =
     last && last.amountRequired > 0
-      ? Math.min(100, Math.max(0, (raised / last.amountRequired) * 100))
+      ? Math.max(0, (raised / last.amountRequired) * 100)
       : 0;
-  const beyondLadder = Boolean(last && raised > last.amountRequired);
+  const surplus =
+    last && raised > last.amountRequired ? raised - last.amountRequired : 0;
+  const beyondLadder = surplus > 0;
 
   return {
     raised,
     current,
     next,
     remaining,
+    surplus,
     percentToNext,
     overallPercent,
     unlocked,
@@ -57,6 +60,7 @@ export function resolveFunding(
       current,
       next,
       remaining,
+      surplus,
       beyondLadder,
     }),
   };
@@ -67,9 +71,10 @@ function buildFundingCopy(input: {
   current: MachineTier | null;
   next: MachineTier | null;
   remaining: number;
+  surplus: number;
   beyondLadder: boolean;
 }): FundingCopy {
-  const { raised, current, next, remaining, beyondLadder } = input;
+  const { raised, current, next, remaining, surplus, beyondLadder } = input;
   const justUnlocked =
     current &&
     current.amountRequired > 0 &&
@@ -88,11 +93,12 @@ function buildFundingCopy(input: {
   } else if (current && next) {
     meterHeadline = `Currently unlocked: ${formatMachineShort(current)}`;
     meterSub = `${formatUsd(remaining)} more unlocks ${memoryNumber(next.memory)} memory and ${storageShort(next.storage)} storage`;
+  } else if (current && !next && beyondLadder) {
+    meterHeadline = `${formatMachineShort(current)} is covered`;
+    meterSub = `+${formatUsd(surplus)} more than this config needs. It keeps counting.`;
   } else if (current && !next) {
     meterHeadline = `We've unlocked ${formatMachineShort(current)}`;
-    meterSub = beyondLadder
-      ? "The published ladder is complete. Further sponsors still fund a better machine."
-      : "The current ladder is complete.";
+    meterSub = "Anything further still counts, past this config.";
   } else {
     meterHeadline = "The ladder is waiting";
     meterSub = "The first sponsor starts the upgrade.";
@@ -102,7 +108,9 @@ function buildFundingCopy(input: {
     raisedLabel: formatUsd(raised),
     milestoneLabel: next
       ? `of next ${formatUsd(next.amountRequired)} milestone`
-      : "raised",
+      : beyondLadder
+        ? `+${formatUsd(surplus)} more than needed`
+        : "raised",
     currentEyebrow: "Currently unlocked",
     currentTitle: current ? current.machineName : "Nothing yet",
     currentLine: current ? formatMachineLine(current) : "A machine is waiting.",
@@ -119,11 +127,15 @@ function buildFundingCopy(input: {
         ],
     nextEyebrow: next
       ? `${formatUsd(remaining)} more unlocks`
-      : "Ladder complete",
-    nextTitle: next ? next.machineName : current?.machineName ?? "Mac mini",
+      : beyondLadder
+        ? `+${formatUsd(surplus)} more than needed`
+        : "Top config funded",
+    nextTitle: next ? next.machineName : beyondLadder ? "Still counting" : current?.machineName ?? "Mac",
     nextLine: next
       ? formatMachineLine(next)
-      : "Further sponsors keep improving the machine.",
+      : beyondLadder
+        ? `+${formatUsd(surplus)} more than the top config needs.`
+        : "Anything further still counts.",
     nextSpecs: next
       ? [
           { label: "Chip", value: next.chip },

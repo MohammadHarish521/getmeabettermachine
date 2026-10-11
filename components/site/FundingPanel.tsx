@@ -12,9 +12,10 @@ export function FundingPanel({
   funding: FundingState;
   founder: PublicSponsor | null;
 }) {
-  const { copy, overallPercent, tiers, raised, next } = funding;
+  const { copy, overallPercent, tiers, raised, next, surplus } = funding;
   const last = tiers.at(-1);
-  const lastAmount = last?.amountRequired ?? 1;
+  const lastAmount = Math.max(last?.amountRequired ?? 1, raised, 1);
+  const fillPercent = Math.min(100, Math.max(0, (raised / lastAmount) * 100));
   const [fill, setFill] = useState(0);
 
   useEffect(() => {
@@ -22,12 +23,12 @@ export function FundingPanel({
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
-      setFill(overallPercent);
+      setFill(fillPercent);
       return;
     }
-    const frame = window.requestAnimationFrame(() => setFill(overallPercent));
+    const frame = window.requestAnimationFrame(() => setFill(fillPercent));
     return () => window.cancelAnimationFrame(frame);
-  }, [overallPercent]);
+  }, [fillPercent]);
 
   return (
     <section aria-label="Mac funding" className="bg-charcoal">
@@ -41,9 +42,9 @@ export function FundingPanel({
               {copy.milestoneLabel}
             </span>
           </p>
-          {overallPercent >= 100 ? (
+          {surplus > 0 ? (
             <p className="mt-2 goal-status justify-center">
-              goal passed · {Math.round(overallPercent)}%
+              +{formatUsd(surplus)} more than needed
             </p>
           ) : (
             <p className="mt-2 text-[13px] font-medium text-blue">

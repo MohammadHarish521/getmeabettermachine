@@ -30,7 +30,7 @@ export type SqlDb = {
 };
 
 /** Bump when migrate() gains tables or columns so a long-lived `next dev` re-applies them. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 5;
 
 const globalForDb = globalThis as unknown as {
   __raiseMyMacDb?: Promise<SqlDb>;
@@ -280,6 +280,7 @@ async function migrate(db: SqlDb) {
   `);
 
   await seedTiersIfEmpty(db);
+  await syncConfiguredTiers(db);
   await seedSpotsIfEmpty(db);
   await ensureDefaultSpots(db);
   await syncSpotPrices(db);
@@ -297,6 +298,37 @@ export async function seedTiersIfEmpty(db?: SqlDb) {
     .get<{ count: number }>();
   if (row && row.count > 0) return;
   await insertDefaultTiers(database);
+}
+
+/** Insert ladder rows added in config, then refresh prices and order for every configured tier. */
+export async function syncConfiguredTiers(db?: SqlDb) {
+  const database = db ?? (await getDb());
+  const existing = await database
+    .prepare("SELECT id FROM machine_tiers")
+    .all<{ id: string }>();
+  const have = new Set(existing.map((row) => row.id));
+  const insert = database.prepare(
+    `INSERT INTO machine_tiers (
+       id, sort_order, amount_required, machine_name, chip, memory, storage,
+       description, short_label, image
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  for (const tier of MACHINE_TIERS) {
+    if (have.has(tier.id)) continue;
+    await insert.run(
+      tier.id,
+      tier.sortOrder,
+      tier.amountRequired,
+      tier.machineName,
+      tier.chip,
+      tier.memory,
+      tier.storage,
+      tier.description,
+      tier.shortLabel,
+      tier.image ?? null,
+    );
+  }
+  await syncTierPrices(database);
 }
 
 export async function syncTierPrices(db?: SqlDb) {

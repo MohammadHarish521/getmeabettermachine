@@ -551,6 +551,18 @@ body {
   height: 28px;
 }
 
+.goal-surplus {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% - 4px);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .goal-track {
   position: absolute;
   inset-inline: 0;
@@ -603,6 +615,23 @@ body {
   border-color: var(--green);
 }
 
+.goal-point[data-machine="macbook"] {
+  z-index: 2;
+}
+
+.goal-point[data-machine="macbook"] .goal-dot {
+  border-color: var(--blue);
+}
+
+.goal-point[data-machine="macbook"][data-unlocked="true"] .goal-dot {
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.goal-point[data-machine="macbook"] .goal-tip-price {
+  color: #8eb6ff;
+}
+
 .goal-tip {
   position: absolute;
   left: 50%;
@@ -621,6 +650,12 @@ body {
     transform 180ms ease;
 }
 
+.goal-point[data-stacked="true"] .goal-tip {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translate(-50%, -6px);
+}
+
 .goal-point[data-edge="start"] .goal-tip {
   left: 0;
   transform: translate(0, 6px);
@@ -637,6 +672,13 @@ body {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.goal-tip-spec {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .goal-tip-price {
@@ -661,7 +703,9 @@ body {
 }
 
 .goal-point:hover .goal-tip,
-.goal-point:focus-visible .goal-tip {
+.goal-point:focus-visible .goal-tip,
+.goal-point[data-stacked="true"]:hover .goal-tip,
+.goal-point[data-stacked="true"]:focus-visible .goal-tip {
   opacity: 1;
   transform: translate(-50%, 0);
 }
