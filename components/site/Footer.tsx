@@ -47,7 +47,9 @@ export function Footer({
               Test checkout is on. Dodo is not configured on this environment.
             </p>
           ) : (
-            <p className="mt-3 text-[12px] text-dim">Payments by Dodo</p>
+            <p className="mt-3 text-[12px] text-dim">
+              Payments by Dodo. Prices are before tax; tax may be added at checkout.
+            </p>
           )}
           <p className="mt-3 text-[12px] text-dim">
             <a className="link-internal hover:text-ink" href="/terms">

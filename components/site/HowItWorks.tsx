@@ -3,7 +3,7 @@ export function HowItWorks() {
     {
       n: "01",
       title: "You pick a spot",
-      body: "Choose a sticker on the Mac. Price is on the slot. Taken seats can be claimed by paying more.",
+      body: "Choose a sticker on the Mac. Price is on the slot, before tax — Dodo may add tax at checkout. Taken seats can be claimed by paying more.",
     },
     {
       n: "02",

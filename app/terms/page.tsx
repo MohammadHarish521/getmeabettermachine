@@ -33,7 +33,8 @@ const SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "Payment",
     body: [
-      "Checkout is in US dollars and is processed by Dodo Payments. The amount is the price shown for that spot when you pay.",
+      "Checkout is in US dollars and is processed by Dodo Payments. Prices on this site are before tax. Dodo Payments may add tax at checkout, depending on where you are.",
+      "The amount you approve on the Dodo page — including any tax they add — is what you pay for that spot.",
       "Starting checkout holds the spot for a short time so two people cannot buy it at once. If you cancel or the payment fails, the hold ends. If you pay, the spot is yours until someone takes it over.",
       "A taken spot can be claimed by paying 1.5× what the current holder paid. That is the price shown as “take over.”",
       "If I refuse or remove a placement because it breaks these terms, the payment is not refunded. If I cannot make the placement for a reason on my side, I will refund it.",
@@ -75,7 +76,7 @@ export default function TermsPage() {
           Paying for a spot means you agree to this. Short version: no illegal
           activity, and no adult content.
         </p>
-        <p className="mt-3 text-[13px] text-dim">Last updated 10 October 2026</p>
+        <p className="mt-3 text-[13px] text-dim">Last updated 11 October 2026</p>
 
         <div className="mt-12 space-y-10">
           {SECTIONS.map((section) => (

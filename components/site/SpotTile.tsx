@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { formatClicks, formatUsd } from "@/lib/format";
 import type { PublicSpot } from "@/lib/types";
 import { useSponsor } from "@/components/site/SponsorProvider";
@@ -41,6 +41,24 @@ export function SpotTile({
 }) {
   const { openSponsor, recordClick, clicksFor } = useSponsor();
   const clicks = clicksFor(spot);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   if (!spot.occupant) {
     return (
@@ -70,21 +88,35 @@ export function SpotTile({
 
   return (
     <div
+      ref={rootRef}
       className={`${className} spot-size-${spot.size.toLowerCase()}`}
       data-taken="true"
       data-held={spot.held ? "true" : "false"}
       data-size={spot.size}
+      data-open={open ? "true" : "false"}
+      data-popover={
+        spot.surface === "front" || spot.surface === "back" || spot.gridRow >= 2
+          ? "above"
+          : "below"
+      }
       style={style}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest(".spot-popover")) return;
+        if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+        setOpen((value) => !value);
+      }}
     >
-      <SiteLogo
-        name={spot.occupant.displayName}
-        siteUrl={spot.occupant.website}
-        src={spot.occupant.logoUrl}
-        className="spot-sticker-logo"
-      />
-      <SpotClicks count={clicks} />
-      {spot.held ? <span className="spot-hold-flag">Checking out</span> : null}
-      <div className="spot-actions">
+      <div className="spot-sticker-face">
+        <SiteLogo
+          name={spot.occupant.displayName}
+          siteUrl={spot.occupant.website}
+          src={spot.occupant.logoUrl}
+          className="spot-sticker-logo"
+        />
+        <SpotClicks count={clicks} />
+        {spot.held ? <span className="spot-hold-flag">Checking out</span> : null}
+      </div>
+      <div className="spot-popover" role="group" aria-label={spot.name}>
         {spot.occupant.website ? (
           <a
             className="spot-action spot-action-visit"

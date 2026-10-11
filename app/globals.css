@@ -791,6 +791,18 @@ body {
   gap: 0.6rem;
 }
 
+.desk-face-block:has(.spot-sticker:hover),
+.desk-face-block:has(.spot-sticker:focus-within),
+.desk-face-block:has(.spot-sticker[data-open="true"]),
+.desk-accessory:has(.spot-sticker:hover),
+.desk-accessory:has(.spot-sticker:focus-within),
+.desk-accessory:has(.spot-sticker[data-open="true"]),
+.desk-center:has(.spot-sticker:hover),
+.desk-center:has(.spot-sticker:focus-within),
+.desk-center:has(.spot-sticker[data-open="true"]) {
+  z-index: 5;
+}
+
 .accessory-label {
   font-size: 11px;
   font-weight: 600;
@@ -910,17 +922,6 @@ body {
   max-width: 84%;
 }
 
-.mac-side-face .spot-actions {
-  gap: 3px;
-  padding: 4px;
-}
-
-.mac-side-face .spot-action {
-  height: 18px;
-  min-height: 18px;
-  font-size: 9px;
-}
-
 .spot-sticker {
   position: relative;
   z-index: 2;
@@ -933,7 +934,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.34);
@@ -1022,6 +1023,22 @@ body {
   }
 }
 
+.spot-sticker-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.spot-sticker:hover,
+.spot-sticker:focus-within,
+.spot-sticker[data-open="true"] {
+  z-index: 30;
+}
+
 .spot-sticker-logo {
   max-height: 58%;
   max-width: 76%;
@@ -1102,30 +1119,64 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
-.spot-actions {
+.spot-popover {
   position: absolute;
-  inset: 0;
-  z-index: 3;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 5;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  gap: 4px;
+  min-width: 116px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(4px);
+  transform: translate(-50%, 6px) scale(0.96);
+  transform-origin: top center;
   transition:
     opacity 180ms ease,
     transform 180ms ease;
 }
 
-.spot-sticker:hover .spot-actions,
-.spot-sticker:focus-within .spot-actions {
+.spot-popover::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 10px;
+}
+
+.spot-sticker[data-popover="above"] .spot-popover {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translate(-50%, -6px) scale(0.96);
+  transform-origin: bottom center;
+}
+
+.spot-sticker[data-popover="above"] .spot-popover::before {
+  bottom: auto;
+  top: 100%;
+}
+
+.spot-sticker:hover .spot-popover,
+.spot-sticker:focus-within .spot-popover,
+.spot-sticker[data-open="true"] .spot-popover {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: translate(-50%, 0) scale(1);
+}
+
+.spot-popover .spot-action {
+  width: 100%;
+  height: 26px;
+  min-height: 26px;
+  font-size: 11px;
 }
 
 .spot-action {
@@ -1316,7 +1367,7 @@ body {
   .goal-fill,
   .btn-primary,
   .spot-sticker,
-  .spot-actions,
+  .spot-popover,
   .spot-action,
   .segmented-btn {
     transition: none;
