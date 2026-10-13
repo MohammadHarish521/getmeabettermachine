@@ -30,7 +30,7 @@ export type SqlDb = {
 };
 
 /** Bump when migrate() gains tables or columns so a long-lived `next dev` re-applies them. */
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 7;
 
 const globalForDb = globalThis as unknown as {
   __raiseMyMacDb?: Promise<SqlDb>;
@@ -328,6 +328,15 @@ export async function syncConfiguredTiers(db?: SqlDb) {
       tier.image ?? null,
     );
   }
+  const keep = new Set(MACHINE_TIERS.map((tier) => tier.id));
+  const stale = existing.filter((row) => !keep.has(row.id));
+  if (stale.length > 0) {
+    await database
+      .prepare(
+        `DELETE FROM machine_tiers WHERE id IN (${stale.map(() => "?").join(",")})`,
+      )
+      .run(...stale.map((row) => row.id));
+  }
   await syncTierPrices(database);
 }
 
@@ -452,6 +461,8 @@ export async function ensureDefaultSpots(db?: SqlDb) {
     "back-port-left",
     "back-port-right",
     "back-center",
+    "sponsor-left",
+    "sponsor-right",
   ].filter((id) => have.has(id));
   const unusedSurfaces = existing.some((row) => {
     const spot = SPOTS.find((item) => item.id === row.id);

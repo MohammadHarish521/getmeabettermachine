@@ -5,7 +5,7 @@
  * the middle row. Taken spots can be claimed by paying 1.5× the current amount.
  */
 export type SpotSize = "S" | "M" | "L";
-export type SpotSurface = "stage" | "front" | "back" | "adapter" | "mouse";
+export type SpotSurface = "stage" | "front" | "back" | "adapter" | "mouse" | "seat";
 
 export const SURFACE_LABEL: Record<SpotSurface, string> = {
   stage: "Top",
@@ -13,6 +13,7 @@ export const SURFACE_LABEL: Record<SpotSurface, string> = {
   back: "Back",
   adapter: "Power adapter",
   mouse: "Magic Mouse",
+  seat: "Sponsor seat",
 };
 
 export type SpotConfig = {
@@ -276,12 +277,37 @@ export const SPOTS: SpotConfig[] = [
     x: 0,
     y: 0,
   },
+  ...sponsorSeats("left", 19),
+  ...sponsorSeats("right", 24),
 ];
+
+function sponsorSeats(side: "left" | "right", startNumber: number): SpotConfig[] {
+  const label = side === "left" ? "Left" : "Right";
+  return [1, 2, 3, 4, 5].map((index) => ({
+    id: `sponsor-${side}-${index}`,
+    number: startNumber + index - 1,
+    name: `${label} ${index}`,
+    description: `Sponsor seat ${index} on the ${side} of the machine. $100, one time.`,
+    price: 100,
+    size: "S" as const,
+    surface: "seat" as const,
+    gridCol: side === "left" ? 1 : 2,
+    gridRow: index,
+    gridSpan: 1 as const,
+    x: 0,
+    y: 0,
+  }));
+}
 
 export const SPOT_HOLD_MS = 20 * 60 * 1000;
 
 /** Checkout id for buying every spot at once. Taken spots count at 1.5×. */
 export const ALL_SPOTS_ID = "all";
+
+/** Take-all covers the Mac and its accessories. Sponsor seats are separate. */
+export function isMachineSpot(spot: { surface: SpotSurface }) {
+  return spot.surface !== "seat";
+}
 
 /** Shorter than SPOT_HOLD_MS: an abandoned all-spots checkout freezes the whole board. */
 export const ALL_SPOTS_HOLD_MS = 10 * 60 * 1000;

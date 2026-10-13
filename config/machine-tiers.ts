@@ -18,9 +18,7 @@
  *   Air 15" M5 16GB / 512GB          ₹1,79,900 → $1,860
  *   Pro 14" M5 16GB / 1TB            ₹2,39,900 → $2,480
  *   Pro 16" M5 Pro 24GB / 1TB        ₹2,99,900 → $3,100  starts here
- *   Pro 16" M5 Pro 48GB / 1TB        ₹4,31,900 → $4,465
- *   Pro 16" M5 Max 128GB / 2TB       ₹8,79,900 → $9,096  nano-texture
- *   Pro 16" M5 Max 128GB / 8TB       ₹12,37,900 → $12,797 nano-texture, top CTO
+ *   Pro 16" M5 Pro 48GB / 1TB        ₹4,31,900 → $4,465  top of the ladder
  *
  * Do not copy these amounts into UI components.
  * Read them through `resolveFunding()` / the database seed.
@@ -187,37 +185,7 @@ export const MACHINE_TIERS: MachineTierConfig[] = [
     memory: "48GB",
     storage: "1TB SSD",
     shortLabel: "Pro 48GB",
-    description: "The 16-inch M5 Pro stepped up to 48GB and a 1TB SSD.",
-    image: null,
-  },
-  {
-    id: "pro-m5max-16-128-2tb",
-    sortOrder: 11,
-    amountRequired: 9096,
-    inrPrice: 879_900,
-    priceSource: "Apple India",
-    machineName: "MacBook Pro",
-    chip: "M5 Max",
-    memory: "128GB",
-    storage: "2TB SSD",
-    shortLabel: "Max 128GB",
-    description:
-      "16-inch M5 Max, 128GB, 2TB, with the nano-texture display.",
-    image: null,
-  },
-  {
-    id: "pro-m5max-16-128-8tb",
-    sortOrder: 12,
-    amountRequired: 12797,
-    inrPrice: 1_237_900,
-    priceSource: "Apple India",
-    machineName: "MacBook Pro",
-    chip: "M5 Max",
-    memory: "128GB",
-    storage: "8TB SSD",
-    shortLabel: "Max 8TB",
-    description:
-      "The top configure-to-order Pro. 16-inch M5 Max, 128GB, 8TB, nano-texture display.",
+    description: "The top of the ladder. 16-inch M5 Pro, 48GB, and a 1TB SSD.",
     image: null,
   },
 ];

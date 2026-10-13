@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ensureDataFast } from "@/lib/datafast";
 import { formatUsd } from "@/lib/format";
-import { ALL_SPOTS_ID, SURFACE_LABEL } from "@/config/spots";
+import { ALL_SPOTS_ID, SURFACE_LABEL, isMachineSpot } from "@/config/spots";
 import { SiteLogo } from "@/components/site/SiteLogo";
 import type { PublicSpot } from "@/lib/types";
 
@@ -22,9 +22,10 @@ export function SponsorModal({
 }) {
   const takeAll = spotId === ALL_SPOTS_ID;
   const spot = takeAll ? null : spots.find((item) => item.id === spotId) ?? null;
-  const allTotal = spots.reduce((sum, item) => sum + item.nextPrice, 0);
-  const takenCount = spots.filter((item) => item.occupant).length;
-  const anyHeld = spots.some((item) => item.held);
+  const machineSpots = spots.filter((item) => isMachineSpot(item));
+  const allTotal = machineSpots.reduce((sum, item) => sum + item.nextPrice, 0);
+  const takenCount = machineSpots.filter((item) => item.occupant).length;
+  const anyHeld = machineSpots.some((item) => item.held);
   const [website, setWebsite] = useState("");
   const [preview, setPreview] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +148,7 @@ export function SponsorModal({
                   onClick={() => onPickSpot(ALL_SPOTS_ID)}
                 >
                   <span className={anyHeld ? "font-medium text-[#8a5a00]" : "font-medium text-blue"}>
-                    {anyHeld ? "Someone is checking out" : `Take all ${spots.length} spots`}
+                    {anyHeld ? "Someone is checking out" : `Take all ${machineSpots.length} Mac spots`}
                     <span
                       className={
                         anyHeld
@@ -157,7 +158,7 @@ export function SponsorModal({
                     >
                       {anyHeld
                         ? "Wait a few minutes if they don’t finish."
-                        : "Every sticker in one checkout"}
+                        : "The Mac only. Sponsor seats stay separate."}
                     </span>
                   </span>
                   {anyHeld ? null : (
@@ -207,13 +208,13 @@ export function SponsorModal({
             {takeAll ? (
               <>
                 <p className="text-[14px] leading-6 text-mute">
-                  Every sticker on the machine: the top, front, back, the power cable and the
-                  Magic Mouse. One checkout, one logo on all of them.
+                  Every sticker on the Mac: the top, front, back, the power cable and the
+                  Magic Mouse. Sponsor seats are not included.
                 </p>
                 <p className="text-2xl font-semibold text-green tabular-nums">
                   {formatUsd(allTotal)}
                   <span className="ml-2 text-[13px] font-normal text-mute">
-                    for {spots.length} spots
+                    for {machineSpots.length} Mac spots
                     {takenCount > 0
                       ? ` · ${takenCount} taken, counted at 1.5×`
                       : ""}
@@ -296,7 +297,7 @@ export function SponsorModal({
               {pending
                 ? "Starting checkout…"
                 : takeAll
-                  ? `Take all ${spots.length} spots`
+                  ? `Take all ${machineSpots.length} Mac spots`
                   : `Take ${spot?.name ?? "this spot"}`}
             </button>
           </form>

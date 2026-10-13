@@ -20,7 +20,7 @@ import {
 } from "@/lib/urls";
 import { cachedListingMeta, fetchListingMeta } from "@/lib/listing-meta";
 import { reportDodoPaymentToDataFast } from "@/lib/datafast-revenue";
-import { ALL_SPOTS_ID } from "@/config/spots";
+import { ALL_SPOTS_ID, isMachineSpot } from "@/config/spots";
 import {
   SPOT_BUSY_MESSAGE,
   clearSpotOccupant,
@@ -96,13 +96,13 @@ type SpotOrder = {
 
 async function spotOrder(spotId: string): Promise<SpotOrder> {
   if (spotId === ALL_SPOTS_ID) {
-    const rows = await listSpotRows();
+    const rows = (await listSpotRows()).filter((row) => isMachineSpot(row));
     if (rows.length === 0) throw new HttpError(404, "There are no spots to take.");
     if (rows.some((row) => isSpotHeld(row))) throw new HttpError(409, SPOT_BUSY_MESSAGE);
     const parts = rows.map((row) => ({ id: row.id, price: nextSpotPrice(row) }));
     return {
-      label: "All spots",
-      priceLabel: "All spots are",
+      label: "All Mac spots",
+      priceLabel: "The Mac spots are",
       price: parts.reduce((sum, part) => sum + part.price, 0),
       parts,
     };

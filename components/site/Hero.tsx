@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SpotStage } from "@/components/site/SpotStage";
+import { SponsorRail, SpotStage } from "@/components/site/SpotStage";
 import { LAST_YEAR_ON_X } from "@/components/site/SocialProof";
 import { MACHINE_TIERS } from "@/config/machine-tiers";
 import { markerPosition } from "@/lib/funding";
@@ -39,6 +39,13 @@ export function Hero({
     const frame = window.requestAnimationFrame(() => setFill(progress));
     return () => window.cancelAnimationFrame(frame);
   }, [progress]);
+
+  const leftSeats = spots
+    .filter((spot) => spot.surface === "seat" && spot.gridCol === 1)
+    .sort((a, b) => a.gridRow - b.gridRow);
+  const rightSeats = spots
+    .filter((spot) => spot.surface === "seat" && spot.gridCol === 2)
+    .sort((a, b) => a.gridRow - b.gridRow);
 
   const status = funding.next
     ? `${formatUsd(funding.remaining)} to ${funding.next.shortLabel}`
@@ -88,73 +95,86 @@ export function Hero({
           </span>
         ) : null}
       </div>
-      <h1 className="display mx-auto max-w-[18ch]">Help me build on a better Mac.</h1>
-      <p className="hero-lede mx-auto mt-4 max-w-lg text-[17px] leading-relaxed text-mute">
-        Brands don’t donate. They take a numbered sticker on the computer I’ll
-        ship from.
-      </p>
-
-      <div className="hero-funding mx-auto mt-6 w-full max-w-3xl">
-        <div className="flex items-baseline justify-between gap-4">
-          <p className="tabular-nums">
-            <span className="text-2xl font-semibold text-green">{funding.copy.raisedLabel}</span>
-            <span className="ml-1.5 text-sm text-mute">raised</span>
-          </p>
-          <p className="text-right text-sm text-mute">{status}</p>
-        </div>
-        <div className="goal-meter mt-4">
-          <div className="goal-track">
-            <div className="goal-fill" style={{ width: `${fill}%` }} />
+      <div className="hero-heading">
+        {leftSeats.length ? (
+          <div className="hero-heading-side">
+            <SponsorRail seats={leftSeats} />
           </div>
-          {funding.tiers.map((tier, index) => {
-            const extra = MACHINE_TIERS.find((item) => item.id === tier.id);
-            const unlocked = funding.raised >= tier.amountRequired;
-            const edge =
-              index === 0 ? "start" : index === funding.tiers.length - 1 ? "end" : "mid";
-            const left = markerPosition(tier, scale);
-            const previous =
-              index > 0 ? markerPosition(funding.tiers[index - 1], scale) : -100;
-            const macbook = tier.machineName.startsWith("MacBook");
-            const lifted = macbook && left - previous < 2;
-            return (
-              <button
-                key={tier.id}
-                type="button"
-                className="goal-point"
-                data-unlocked={unlocked ? "true" : "false"}
-                data-machine={macbook ? "macbook" : "mini"}
-                data-edge={edge}
-                data-stacked={lifted ? "true" : "false"}
-                style={{ left: `${left}%`, marginTop: lifted ? -13 : 0 }}
-                aria-label={`${tier.shortLabel}, ${formatUsd(tier.amountRequired)}${
-                  extra ? `, ${formatInr(extra.inrPrice)} on ${extra.priceSource}` : ""
-                }`}
-              >
-                <span className="goal-dot" />
-                <span className="goal-tip" role="tooltip">
-                  <span className="goal-tip-label">{tier.machineName}</span>
-                  <span className="goal-tip-spec">
-                    {tier.chip} · {tier.memory} · {tier.storage.replace(/\s+SSD$/i, "")}
-                  </span>
-                  <span className="goal-tip-price">{formatUsd(tier.amountRequired)}</span>
-                  {extra ? (
-                    <span className="goal-tip-source">
-                      {formatInr(extra.inrPrice)} · {extra.priceSource}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
-          {funding.surplus > 0 ? (
-            <span className="goal-surplus">+{formatUsd(funding.surplus)} more</span>
-          ) : null}
-        </div>
-        {founder ? (
-          <p className="mt-3 text-[13px] text-mute">
-            Including {formatUsd(founder.amount)} I put in to start. Mini prices use Flipkart
-            BBD where a listing is live. MacBook prices are Apple India.
+        ) : null}
+        <div className="hero-heading-copy">
+          <h1 className="display mx-auto max-w-[18ch]">Help me build on a better Mac.</h1>
+          <p className="hero-lede mx-auto mt-3 max-w-lg text-[17px] leading-relaxed text-mute">
+            Brands don’t donate. They take a numbered sticker on the computer I’ll
+            ship from.
           </p>
+          <div className="hero-funding mx-auto mt-4 w-full">
+            <div className="flex items-baseline justify-between gap-4">
+              <p className="tabular-nums">
+                <span className="text-2xl font-semibold text-green">{funding.copy.raisedLabel}</span>
+                <span className="ml-1.5 text-sm text-mute">raised</span>
+              </p>
+              <p className="text-right text-sm text-mute">{status}</p>
+            </div>
+            <div className="goal-meter mt-3">
+              <div className="goal-track">
+                <div className="goal-fill" style={{ width: `${fill}%` }} />
+              </div>
+              {funding.tiers.map((tier, index) => {
+                const extra = MACHINE_TIERS.find((item) => item.id === tier.id);
+                const unlocked = funding.raised >= tier.amountRequired;
+                const edge =
+                  index === 0 ? "start" : index === funding.tiers.length - 1 ? "end" : "mid";
+                const left = markerPosition(tier, scale);
+                const previous =
+                  index > 0 ? markerPosition(funding.tiers[index - 1], scale) : -100;
+                const macbook = tier.machineName.startsWith("MacBook");
+                const lifted = macbook && left - previous < 2;
+                return (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    className="goal-point"
+                    data-unlocked={unlocked ? "true" : "false"}
+                    data-machine={macbook ? "macbook" : "mini"}
+                    data-edge={edge}
+                    data-stacked={lifted ? "true" : "false"}
+                    style={{ left: `${left}%`, marginTop: lifted ? -13 : 0 }}
+                    aria-label={`${tier.shortLabel}, ${formatUsd(tier.amountRequired)}${
+                      extra ? `, ${formatInr(extra.inrPrice)} on ${extra.priceSource}` : ""
+                    }`}
+                  >
+                    <span className="goal-dot" />
+                    <span className="goal-tip" role="tooltip">
+                      <span className="goal-tip-label">{tier.machineName}</span>
+                      <span className="goal-tip-spec">
+                        {tier.chip} · {tier.memory} · {tier.storage.replace(/\s+SSD$/i, "")}
+                      </span>
+                      <span className="goal-tip-price">{formatUsd(tier.amountRequired)}</span>
+                      {extra ? (
+                        <span className="goal-tip-source">
+                          {formatInr(extra.inrPrice)} · {extra.priceSource}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+              {funding.surplus > 0 ? (
+                <span className="goal-surplus">+{formatUsd(funding.surplus)} more</span>
+              ) : null}
+            </div>
+            {founder ? (
+              <p className="mt-3 text-[13px] text-mute">
+                Including {formatUsd(founder.amount)} I put in to start. Mini prices use Flipkart
+                BBD where a listing is live. MacBook prices are Apple India.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        {rightSeats.length ? (
+          <div className="hero-heading-side">
+            <SponsorRail seats={rightSeats} />
+          </div>
         ) : null}
       </div>
 
