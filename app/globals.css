@@ -882,7 +882,7 @@ body {
 .sponsor-rail-list > li {
   display: flex;
   flex: 1 1 0;
-  min-height: 0;
+  min-height: 36px;
 }
 
 .sponsor-row {
@@ -897,9 +897,35 @@ body {
   box-shadow:
     0 4px 10px rgba(0, 0, 0, 0.05),
     inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-  padding: 3px 6px;
+  padding: 6px 8px;
   text-align: left;
   cursor: pointer;
+}
+
+@media (max-width: 1079px) {
+  .sponsor-rail {
+    height: auto;
+  }
+
+  .sponsor-rail-list {
+    flex: none;
+  }
+
+  .sponsor-rail-list > li,
+  .sponsor-row {
+    flex: none;
+    min-height: 36px;
+  }
+
+  .sponsor-rail-title {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .sponsor-row-name,
+  .sponsor-row-price {
+    font-size: 12px;
+  }
 }
 
 .sponsor-row:disabled {
