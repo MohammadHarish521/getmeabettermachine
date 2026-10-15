@@ -11,7 +11,7 @@ import {
 import type Database from "better-sqlite3";
 import { MACHINE_TIERS } from "@/config/machine-tiers";
 import { SPOTS } from "@/config/spots";
-import { FOUNDER_SPONSOR, SITE_DEFAULTS } from "@/config/site";
+import { CLIENT_CONTRIBUTIONS, FOUNDER_SPONSOR, SITE_DEFAULTS } from "@/config/site";
 import { env } from "@/lib/env";
 import { formatUsd, letterLogo } from "@/lib/format";
 
@@ -30,7 +30,7 @@ export type SqlDb = {
 };
 
 /** Bump when migrate() gains tables or columns so a long-lived `next dev` re-applies them. */
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 const globalForDb = globalThis as unknown as {
   __raiseMyMacDb?: Promise<SqlDb>;
@@ -289,6 +289,7 @@ async function migrate(db: SqlDb) {
   await addColumn(db, "spots", "click_count", "INTEGER NOT NULL DEFAULT 0");
   await addColumn(db, "spots", "pending_until", "TEXT");
   await seedFounderSponsor(db);
+  await seedClientContributions(db);
 }
 
 export async function seedTiersIfEmpty(db?: SqlDb) {
@@ -679,4 +680,58 @@ async function seedFounderSponsor(db: SqlDb) {
     );
   }
   await dropUnlock.run("founder-unlock-mini-pro-48-1tb");
+}
+
+async function seedClientContributions(db: SqlDb) {
+  const now = nowIso();
+  for (const client of CLIENT_CONTRIBUTIONS) {
+    await db
+      .prepare(
+        `INSERT INTO sponsors (
+           id, name, company, website, x_url, logo_url, message, amount, currency,
+           status, payment_id, checkout_id, is_anonymous, is_visible, spot_id,
+           created_at, updated_at
+         ) VALUES (?, ?, '', '', '', '', ?, ?, 'USD', 'paid', ?, NULL, 0, 0, NULL, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           name = excluded.name,
+           message = excluded.message,
+           amount = excluded.amount,
+           status = 'paid',
+           is_visible = 0,
+           spot_id = NULL,
+           payment_id = excluded.payment_id,
+           updated_at = excluded.updated_at`,
+      )
+      .run(client.id, client.name, client.message, client.amount, client.paymentId, now, now);
+
+    await db
+      .prepare(
+        `INSERT INTO payments (
+           id, sponsor_id, amount, status, provider, created_at, processed_at
+         ) VALUES (?, ?, ?, 'succeeded', 'wise', ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           amount = excluded.amount,
+           status = 'succeeded',
+           processed_at = COALESCE(payments.processed_at, excluded.processed_at)`,
+      )
+      .run(client.paymentId, client.id, client.amount, now, now);
+
+    const activityId = `${client.id}-activity`;
+    const label = `A client put in ${formatUsd(client.amount)}`;
+    const existing = await db
+      .prepare("SELECT id FROM activity_events WHERE id = ?")
+      .get<{ id: string }>(activityId);
+    if (existing) {
+      await db
+        .prepare("UPDATE activity_events SET label = ?, amount = ? WHERE id = ?")
+        .run(label, client.amount, activityId);
+    } else {
+      await db
+        .prepare(
+          `INSERT INTO activity_events (id, type, sponsor_id, tier_id, amount, label, created_at)
+           VALUES (?, 'sponsor', ?, NULL, ?, ?, ?)`,
+        )
+        .run(activityId, client.id, client.amount, label, now);
+    }
+  }
 }

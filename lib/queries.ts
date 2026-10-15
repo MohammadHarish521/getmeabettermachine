@@ -16,13 +16,14 @@ import type {
 } from "@/lib/types";
 
 export const getHomeSnapshot = cache(async () => {
-  const [tiers, raised, sponsors, spots, activity, settings] = await Promise.all([
+  const [tiers, raised, sponsors, spots, activity, settings, fromClients] = await Promise.all([
     listMachineTiers(),
     paidRaised(),
     listVisibleSponsors(),
     listPublicSpots(),
     listActivity(12),
     getSiteSettings(),
+    clientRaised(),
   ]);
   const funding = resolveFunding(raised, tiers);
   const stats = sponsorStats(sponsors, raised);
@@ -34,6 +35,7 @@ export const getHomeSnapshot = cache(async () => {
     stats,
     activity,
     settings,
+    fromClients,
     mockPayments: !isDodoConfigured(),
   };
 });
@@ -43,6 +45,18 @@ export async function paidRaised() {
   const row = await db
     .prepare(
       "SELECT COALESCE(SUM(amount), 0) AS total FROM sponsors WHERE status = 'paid'",
+    )
+    .get<{ total: number }>();
+  return Number(row?.total) || 0;
+}
+
+async function clientRaised() {
+  const db = await getDb();
+  const row = await db
+    .prepare(
+      `SELECT COALESCE(SUM(amount), 0) AS total
+       FROM sponsors
+       WHERE status = 'paid' AND id LIKE 'client-%'`,
     )
     .get<{ total: number }>();
   return Number(row?.total) || 0;

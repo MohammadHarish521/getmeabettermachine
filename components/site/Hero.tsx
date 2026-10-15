@@ -13,12 +13,14 @@ export function Hero({
   funding,
   spots,
   founder,
+  clientRaised = 0,
   followers,
   stats,
 }: {
   funding: FundingState;
   spots: PublicSpot[];
   founder: PublicSponsor | null;
+  clientRaised?: number;
   followers: string | null;
   stats: DataFastStats | null;
 }) {
@@ -165,8 +167,10 @@ export function Hero({
             </div>
             {founder ? (
               <p className="mt-3 text-[13px] text-mute">
-                Including {formatUsd(founder.amount)} I put in to start. Mini prices use Flipkart
-                BBD where a listing is live. MacBook prices are Apple India.
+                Including {formatUsd(founder.amount)} I put in to start.
+                {clientRaised > 0 ? ` ${formatUsd(clientRaised)} raised from clients.` : ""}{" "}
+                Mini prices use Flipkart BBD where a listing is live. MacBook prices are Apple
+                India.
               </p>
             ) : null}
           </div>

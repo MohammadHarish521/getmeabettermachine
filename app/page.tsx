@@ -29,6 +29,7 @@ export default async function Page() {
           funding={data.funding}
           spots={data.spots}
           founder={data.sponsors.find((sponsor) => sponsor.isFounder) ?? null}
+          clientRaised={data.fromClients}
           followers={
             profile.followers
               ? new Intl.NumberFormat("en-US", { notation: "compact" }).format(profile.followers)

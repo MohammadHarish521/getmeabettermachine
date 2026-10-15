@@ -40,3 +40,17 @@ export const FOUNDER_SPONSOR = {
   website: "https://x.com/Harish_521",
   message: `I put in ${formatUsd(founderAmount)} of my own money to start. Your sticker sits on a machine I’m already funding.`,
 } as const;
+
+/**
+ * Money from client work, not a sticker. Counted in the raised total.
+ * The Wise line is a transfer an old client sent, not the Wise sponsor seat.
+ */
+export const CLIENT_CONTRIBUTIONS = [
+  {
+    id: "client-wise-50",
+    paymentId: "client-wise-50-pay",
+    amount: 50,
+    name: "A client",
+    message: "An old client sent $50 through Wise.",
+  },
+] as const;
