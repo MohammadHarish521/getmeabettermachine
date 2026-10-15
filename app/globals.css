@@ -88,6 +88,28 @@ body {
   margin-top: 0.85rem;
 }
 
+.client-raised {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(26, 127, 55, 0.1);
+  padding: 4px 10px 4px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #146c2e;
+}
+
+.client-raised-amount {
+  border-radius: 999px;
+  background: #1a7f37;
+  padding: 2px 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
 @media (min-width: 1080px) {
   .hero-heading {
     grid-template-columns: minmax(188px, 220px) minmax(0, 1fr) minmax(188px, 220px);

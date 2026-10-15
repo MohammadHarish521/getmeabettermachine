@@ -168,11 +168,17 @@ export function Hero({
             {founder ? (
               <p className="mt-3 text-[13px] text-mute">
                 Including {formatUsd(founder.amount)} I put in to start.
-                {clientRaised > 0 ? ` ${formatUsd(clientRaised)} raised from clients.` : ""}{" "}
-                Mini prices use Flipkart BBD where a listing is live. MacBook prices are Apple
-                India.
               </p>
             ) : null}
+            {clientRaised > 0 ? (
+              <p className="client-raised">
+                <span className="client-raised-amount">{formatUsd(clientRaised)}</span>
+                raised from clients
+              </p>
+            ) : null}
+            <p className="mt-2 text-[13px] text-dim">
+              Mini prices use Flipkart BBD where a listing is live. MacBook prices are Apple India.
+            </p>
           </div>
         </div>
         {rightSeats.length ? (
