@@ -53,4 +53,11 @@ export const CLIENT_CONTRIBUTIONS = [
     name: "A client",
     message: "An old client sent $50 through Wise.",
   },
+  {
+    id: "client-paypal-60",
+    paymentId: "client-paypal-60-pay",
+    amount: 60,
+    name: "A client",
+    message: "An old client sent $60 through PayPal.",
+  },
 ] as const;
